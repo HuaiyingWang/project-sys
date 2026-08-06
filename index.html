@@ -223,14 +223,28 @@ button,input,select,textarea{font:inherit; color:inherit}
   border-radius:var(--radius);border:1px solid var(--line-2);background:var(--surface-2);
   font-size:14px;color:var(--ink-2);text-decoration:none;
 }
-.filechip__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filechip__name{
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;
+}
+.filechip__name:hover{color:var(--accent-ink);text-decoration:underline}
 .filechip__x{
   flex:0 0 auto;width:19px;height:19px;border-radius:50%;border:0;background:transparent;
   color:var(--muted);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
 }
 .filechip__x:hover{background:var(--danger);color:#fff}
-.filechip--btn{cursor:pointer}
-.filechip--btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.filechip__dl{
+  flex:0 0 auto;width:19px;height:19px;border-radius:50%;border:0;background:transparent;
+  color:var(--muted);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;
+}
+.filechip__dl:hover{background:var(--accent-soft);color:var(--accent-ink)}
+.filepreview-frame{width:min(90vw,1060px);height:82vh;border:0;display:block}
+.filepreview-text{
+  margin:0;padding:18px 20px;max-height:82vh;overflow:auto;white-space:pre-wrap;word-break:break-word;
+  font-family:var(--mono);font-size:13.5px;line-height:1.6;
+}
+.filepreview-empty{padding:48px 20px;text-align:center;color:var(--muted)}
 
 .timeline{position:relative;padding-left:26px}
 .timeline::before{content:"";position:absolute;left:6px;top:8px;bottom:8px;width:1px;background:var(--line-2)}
@@ -573,6 +587,16 @@ dialog::backdrop{background:rgba(16,20,26,.5)}
   <div class="dlg__body" style="padding:0"><img id="dlg-image-img" alt=""></div>
 </dialog>
 
+<!-- ============ 檔案預覽 ============ -->
+<dialog id="dlg-file" class="lightbox" aria-label="檔案預覽">
+  <div class="dlg__head">
+    <h2 class="dlg__title" id="dlg-file-title">檔案</h2>
+    <a class="btn btn--ghost btn--sm" id="dlg-file-dl" download>下載</a>
+    <button class="btn btn--ghost btn--sm" type="button" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg__body" id="dlg-file-body" style="padding:0"></div>
+</dialog>
+
 <script>
 "use strict";
 
@@ -691,6 +715,43 @@ function toast(msg){
 function objectUrl(id, blob){
   if(!urlCache.has(id)) urlCache.set(id, URL.createObjectURL(blob));
   return urlCache.get(id);
+}
+
+function openImagePreview(rec){
+  $("#dlg-image-img").src = objectUrl(rec.id, rec.blob);
+  $("#dlg-image-img").alt = rec.name || "圖片";
+  $("#dlg-image-title").textContent = rec.name || "圖片";
+  $("#dlg-image").showModal();
+}
+
+const TEXT_PREVIEW_EXT = ["txt","md","markdown","json","csv","log","yml","yaml","xml"];
+function fileKind(name, type){
+  const ext = String(name || "").split(".").pop().toLowerCase();
+  if((type && type.startsWith("image/"))) return "image";
+  if(type === "application/pdf" || ext === "pdf") return "pdf";
+  if((type && type.startsWith("text/")) || TEXT_PREVIEW_EXT.includes(ext)) return "text";
+  return "other";
+}
+async function openFilePreview(rec){
+  const kind = fileKind(rec.name, rec.blob.type);
+  const url = objectUrl(rec.id, rec.blob);
+  $("#dlg-file-title").textContent = rec.name || "檔案";
+  const dl = $("#dlg-file-dl");
+  dl.href = url;
+  dl.setAttribute("download", rec.name || "檔案");
+  const body = $("#dlg-file-body");
+  if(kind === "image"){
+    body.innerHTML = `<img src="${url}" alt="${esc(rec.name)}" style="display:block;max-width:100%;max-height:82vh;margin:0 auto">`;
+  } else if(kind === "pdf"){
+    body.innerHTML = `<iframe class="filepreview-frame" src="${url}" title="${esc(rec.name)}"></iframe>`;
+  } else if(kind === "text"){
+    body.innerHTML = `<pre class="filepreview-text"></pre>`;
+    try { body.querySelector("pre").textContent = await rec.blob.text(); }
+    catch { body.innerHTML = `<p class="filepreview-empty">無法讀取檔案內容。</p>`; }
+  } else {
+    body.innerHTML = `<p class="filepreview-empty">這個檔案類型無法在瀏覽器內預覽，請按右上角「下載」開啟。</p>`;
+  }
+  $("#dlg-file").showModal();
 }
 function openConfirm(message, onYes){
   const dlg = $("#dlg-confirm");
@@ -1198,9 +1259,13 @@ function renderDraftThumbs(){
   if(!box) return;
   box.innerHTML = state.draftImages.map(im => `
     <div class="thumb">
-      <img src="${objectUrl(im.id, im.blob)}" alt="${esc(im.name)}">
+      <img src="${objectUrl(im.id, im.blob)}" alt="${esc(im.name)}" style="cursor:pointer" data-viewimg="${im.id}">
       <button class="thumb__x" type="button" data-drop="${im.id}" aria-label="移除 ${esc(im.name)}">✕</button>
     </div>`).join("");
+  $$("[data-viewimg]", box).forEach(b => b.addEventListener("click", () => {
+    const im = state.draftImages.find(x => x.id === b.dataset.viewimg);
+    if(im) openImagePreview(im);
+  }));
   $$("[data-drop]", box).forEach(b => b.addEventListener("click", () => {
     state.draftImages = state.draftImages.filter(x => x.id !== b.dataset.drop);
     renderDraftThumbs();
@@ -1216,9 +1281,13 @@ function renderDraftFiles(){
   if(!box) return;
   box.innerHTML = state.draftFiles.map(f => `
     <span class="filechip">
-      <span class="filechip__name" title="${esc(f.name)}">📎 ${esc(f.name)}</span>
+      <button class="filechip__name" type="button" data-previewfile="${f.id}" title="預覽 ${esc(f.name)}">📎 ${esc(f.name)}</button>
       <button class="filechip__x" type="button" data-dropfile="${f.id}" aria-label="移除 ${esc(f.name)}">✕</button>
     </span>`).join("");
+  $$("[data-previewfile]", box).forEach(b => b.addEventListener("click", () => {
+    const f = state.draftFiles.find(x => x.id === b.dataset.previewfile);
+    if(f) openFilePreview(f);
+  }));
   $$("[data-dropfile]", box).forEach(b => b.addEventListener("click", () => {
     state.draftFiles = state.draftFiles.filter(x => x.id !== b.dataset.dropfile);
     renderDraftFiles();
@@ -1348,8 +1417,10 @@ async function renderTimeline(projectId){
     for(const fileId of (r.files || [])){
       const rec = await dbGet("files", fileId);
       if(!rec) continue;
-      fileChips += `<a class="filechip filechip--btn" href="${objectUrl(fileId, rec.blob)}" download="${esc(rec.name)}">
-        <span class="filechip__name" title="${esc(rec.name)}">📎 ${esc(rec.name)}</span></a>`;
+      fileChips += `<span class="filechip">
+        <button class="filechip__name" type="button" data-previewfile="${fileId}" title="預覽 ${esc(rec.name)}">📎 ${esc(rec.name)}</button>
+        <a class="filechip__dl" href="${objectUrl(fileId, rec.blob)}" download="${esc(rec.name)}" aria-label="下載 ${esc(rec.name)}" title="下載">⭳</a>
+      </span>`;
     }
     parts.push(`
       <div class="tl-item ${r.done ? "tl-item--done" : ""}">
@@ -1391,11 +1462,11 @@ async function renderTimeline(projectId){
   }));
   $$("[data-img]", box).forEach(b => b.addEventListener("click", async () => {
     const rec = await dbGet("images", b.dataset.img);
-    if(!rec) return;
-    $("#dlg-image-img").src = objectUrl(rec.id, rec.blob);
-    $("#dlg-image-img").alt = rec.name || "需求附圖";
-    $("#dlg-image-title").textContent = rec.name || "需求附圖";
-    $("#dlg-image").showModal();
+    if(rec) openImagePreview(rec);
+  }));
+  $$("[data-previewfile]", box).forEach(b => b.addEventListener("click", async () => {
+    const rec = await dbGet("files", b.dataset.previewfile);
+    if(rec) openFilePreview(rec);
   }));
 }
 
