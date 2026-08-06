@@ -217,6 +217,20 @@ button,input,select,textarea{font:inherit; color:inherit}
 .thumb__x:hover{background:var(--danger)}
 .thumb--btn{padding:0;cursor:pointer}
 .thumb--btn:hover{border-color:var(--accent)}
+.filelist{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.filechip{
+  display:inline-flex;align-items:center;gap:7px;max-width:240px;padding:6px 8px 6px 12px;
+  border-radius:var(--radius);border:1px solid var(--line-2);background:var(--surface-2);
+  font-size:14px;color:var(--ink-2);text-decoration:none;
+}
+.filechip__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filechip__x{
+  flex:0 0 auto;width:19px;height:19px;border-radius:50%;border:0;background:transparent;
+  color:var(--muted);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.filechip__x:hover{background:var(--danger);color:#fff}
+.filechip--btn{cursor:pointer}
+.filechip--btn:hover{border-color:var(--accent);color:var(--accent-ink)}
 
 .timeline{position:relative;padding-left:26px}
 .timeline::before{content:"";position:absolute;left:6px;top:8px;bottom:8px;width:1px;background:var(--line-2)}
@@ -524,7 +538,7 @@ dialog::backdrop{background:rgba(16,20,26,.5)}
   <div class="dlg__body">
     <p class="hint" style="margin:0 0 12px">
       貼上 Markdown 匯入會<strong>累加</strong>資料，不會清空現有內容。同名的專案與窗口會被更新而非重複建立。
-      圖片無法透過 Markdown 傳遞，完整備份請用 JSON。
+      圖片與檔案無法透過 Markdown 傳遞，完整備份請用 JSON。
     </p>
     <label class="lbl" for="md-text">內容</label>
     <textarea class="inp ta" id="md-text" spellcheck="false"
@@ -577,7 +591,7 @@ const LEGACY_SOURCES = [
 ];
 const SOON_DAYS = 30;
 const DB_NAME = "project_desk";
-const DB_VER  = 2;
+const DB_VER  = 3;
 
 /* ═══════════ IndexedDB ═══════════ */
 let db;
@@ -592,6 +606,7 @@ function openDB(){
         s.createIndex("projectId","projectId",{unique:false});
       }
       if(!d.objectStoreNames.contains("images")) d.createObjectStore("images",{keyPath:"id"});
+      if(!d.objectStoreNames.contains("files")) d.createObjectStore("files",{keyPath:"id"});
       if(!d.objectStoreNames.contains("contacts")) d.createObjectStore("contacts",{keyPath:"id"});
     };
     r.onsuccess = e => { db = e.target.result; resolve(db); };
@@ -616,6 +631,7 @@ const state = {
   currentId: null,
   tab: "basic",
   draftImages: [],
+  draftFiles: [],
   editingReqId: null,
   reqOnlyOpen: false,
 };
@@ -1064,8 +1080,13 @@ function detailHTML(p){
       <label class="lbl" for="r-content">需求內容</label>
       <textarea class="ta" id="r-content" placeholder="老闆說首頁 banner 要換成新版⋯（可直接 Ctrl+V 貼上截圖，或把圖片拖進來）"></textarea>
       <div class="thumbs" id="r-thumbs"></div>
-      <p class="reqform__hint">支援貼上、拖放，或 <button class="btn btn--sm btn--ghost" type="button" id="r-pick">選擇圖片</button></p>
+      <div class="filelist" id="r-filelist"></div>
+      <p class="reqform__hint">支援貼上、拖放，或
+        <button class="btn btn--sm btn--ghost" type="button" id="r-pick">選擇圖片</button>
+        <button class="btn btn--sm btn--ghost" type="button" id="r-pick-file">選擇檔案</button>
+      </p>
       <input type="file" id="r-file" accept="image/*" multiple class="sr-only" tabindex="-1">
+      <input type="file" id="r-filedoc" multiple class="sr-only" tabindex="-1">
       <div class="dlg__foot" style="padding:12px 0 0;border:0">
         <button class="btn" type="button" id="req-cancel" hidden>取消編輯</button>
         <button class="btn btn--primary" type="submit" id="req-submit">新增需求</button>
@@ -1086,7 +1107,7 @@ function bindDetail(p){
   if(assign) assign.addEventListener("click", () => openProjectForm(p.id));
   $("#btn-dup").addEventListener("click", () => duplicateProject(p));
   $("#btn-del").addEventListener("click", () =>
-    openConfirm(`確定要刪除「${p.name}」嗎？這個專案底下的所有需求紀錄和圖片也會一併移除，且無法復原。`,
+    openConfirm(`確定要刪除「${p.name}」嗎？這個專案底下的所有需求紀錄、圖片和檔案也會一併移除，且無法復原。`,
       () => deleteProject(p.id)));
 
   $$(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
@@ -1103,8 +1124,10 @@ function bindDetail(p){
   });
 
   state.draftImages = [];
+  state.draftFiles = [];
   state.editingReqId = null;
   renderDraftThumbs();
+  renderDraftFiles();
   const ta = $("#r-content");
   ta.addEventListener("paste", e => {
     const files = [...(e.clipboardData?.items || [])]
@@ -1116,11 +1139,16 @@ function bindDetail(p){
   ["dragleave","drop"].forEach(ev => ta.addEventListener(ev, () => ta.classList.remove("dropzone")));
   ta.addEventListener("drop", e => {
     e.preventDefault();
-    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
-    if(files.length) addDraftImages(files);
+    const all = [...e.dataTransfer.files];
+    const imgs = all.filter(f => f.type.startsWith("image/"));
+    const docs = all.filter(f => !f.type.startsWith("image/"));
+    if(imgs.length) addDraftImages(imgs);
+    if(docs.length) addDraftFiles(docs);
   });
   $("#r-pick").addEventListener("click", () => $("#r-file").click());
   $("#r-file").addEventListener("change", e => { addDraftImages([...e.target.files]); e.target.value = ""; });
+  $("#r-pick-file").addEventListener("click", () => $("#r-filedoc").click());
+  $("#r-filedoc").addEventListener("change", e => { addDraftFiles([...e.target.files]); e.target.value = ""; });
   $("#form-req").addEventListener("submit", e => { e.preventDefault(); saveRequirement(p.id); });
   $("#r-add-contact").addEventListener("click", () => openContactForm(null, "req"));
   $("#req-cancel").addEventListener("click", () => resetReqForm());
@@ -1151,6 +1179,7 @@ async function deleteProject(id){
   const reqs = await dbByIndex("reqs", "projectId", id);
   for(const r of reqs){
     for(const imgId of (r.images || [])) await dbDel("images", imgId);
+    for(const fileId of (r.files || [])) await dbDel("files", fileId);
     await dbDel("reqs", r.id);
   }
   await dbDel("projects", id);
@@ -1178,15 +1207,35 @@ function renderDraftThumbs(){
   }));
 }
 
+function addDraftFiles(files){
+  files.forEach(f => state.draftFiles.push({ id: uid(), blob: f, name: f.name || "檔案" }));
+  renderDraftFiles();
+}
+function renderDraftFiles(){
+  const box = $("#r-filelist");
+  if(!box) return;
+  box.innerHTML = state.draftFiles.map(f => `
+    <span class="filechip">
+      <span class="filechip__name" title="${esc(f.name)}">📎 ${esc(f.name)}</span>
+      <button class="filechip__x" type="button" data-dropfile="${f.id}" aria-label="移除 ${esc(f.name)}">✕</button>
+    </span>`).join("");
+  $$("[data-dropfile]", box).forEach(b => b.addEventListener("click", () => {
+    state.draftFiles = state.draftFiles.filter(x => x.id !== b.dataset.dropfile);
+    renderDraftFiles();
+  }));
+}
+
 function resetReqForm(){
   state.editingReqId = null;
   state.draftImages = [];
+  state.draftFiles = [];
   if($("#r-content")) $("#r-content").value = "";
   if($("#r-date")) $("#r-date").value = new Date().toISOString().slice(0,10);
   if($("#r-source")) $("#r-source").value = defaultSourceId();
   if($("#req-submit")) $("#req-submit").textContent = "新增需求";
   if($("#req-cancel")) $("#req-cancel").hidden = true;
   renderDraftThumbs();
+  renderDraftFiles();
 }
 
 async function startEditReq(id){
@@ -1202,6 +1251,12 @@ async function startEditReq(id){
     if(rec) state.draftImages.push({ id: rec.id, blob: rec.blob, name: rec.name });
   }
   renderDraftThumbs();
+  state.draftFiles = [];
+  for(const fileId of (r.files || [])){
+    const rec = await dbGet("files", fileId);
+    if(rec) state.draftFiles.push({ id: rec.id, blob: rec.blob, name: rec.name });
+  }
+  renderDraftFiles();
   $("#req-submit").textContent = "更新需求";
   $("#req-cancel").hidden = false;
   $("#r-content").focus();
@@ -1210,12 +1265,19 @@ async function startEditReq(id){
 
 async function saveRequirement(projectId){
   const content = $("#r-content").value.trim();
-  if(!content && !state.draftImages.length){ toast("請輸入內容或加入圖片"); $("#r-content").focus(); return; }
+  if(!content && !state.draftImages.length && !state.draftFiles.length){
+    toast("請輸入內容或加入圖片、檔案"); $("#r-content").focus(); return;
+  }
 
   const imageIds = [];
   for(const im of state.draftImages){
     await dbPut("images", { id: im.id, blob: im.blob, name: im.name, type: im.blob.type });
     imageIds.push(im.id);
+  }
+  const fileIds = [];
+  for(const f of state.draftFiles){
+    await dbPut("files", { id: f.id, blob: f.blob, name: f.name, type: f.blob.type });
+    fileIds.push(f.id);
   }
 
   const srcId = $("#r-source").value;
@@ -1224,11 +1286,12 @@ async function saveRequirement(projectId){
   if(state.editingReqId){
     const r = state.reqs.find(x => x.id === state.editingReqId);
     for(const old of (r.images || [])) if(!imageIds.includes(old)) await dbDel("images", old);
+    for(const old of (r.files || [])) if(!fileIds.includes(old)) await dbDel("files", old);
     await dbPut("reqs", {
       ...r,
       date: $("#r-date").value || r.date,
       sourceContactId: srcId, sourceName: srcName,
-      content, images: imageIds, updatedAt: Date.now(),
+      content, images: imageIds, files: fileIds, updatedAt: Date.now(),
     });
     toast("需求已更新");
   } else {
@@ -1236,7 +1299,7 @@ async function saveRequirement(projectId){
       id: uid(), projectId,
       date: $("#r-date").value || new Date().toISOString().slice(0,10),
       sourceContactId: srcId, sourceName: srcName,
-      content, images: imageIds, done: false, createdAt: Date.now(),
+      content, images: imageIds, files: fileIds, done: false, createdAt: Date.now(),
     });
     toast("需求已新增");
   }
@@ -1281,6 +1344,13 @@ async function renderTimeline(projectId){
       thumbs += `<button class="thumb thumb--btn" type="button" data-img="${imgId}" aria-label="放大檢視 ${esc(rec.name)}">
         <img src="${objectUrl(imgId, rec.blob)}" alt="${esc(rec.name)}"></button>`;
     }
+    let fileChips = "";
+    for(const fileId of (r.files || [])){
+      const rec = await dbGet("files", fileId);
+      if(!rec) continue;
+      fileChips += `<a class="filechip filechip--btn" href="${objectUrl(fileId, rec.blob)}" download="${esc(rec.name)}">
+        <span class="filechip__name" title="${esc(rec.name)}">📎 ${esc(rec.name)}</span></a>`;
+    }
     parts.push(`
       <div class="tl-item ${r.done ? "tl-item--done" : ""}">
         <div class="tl-head">
@@ -1294,6 +1364,7 @@ async function renderTimeline(projectId){
         </div>
         ${r.content ? `<div class="tl-body">${esc(r.content)}</div>` : ""}
         ${thumbs ? `<div class="thumbs">${thumbs}</div>` : ""}
+        ${fileChips ? `<div class="filelist">${fileChips}</div>` : ""}
       </div>`);
   }
   box.innerHTML = `<div class="timeline">${parts.join("")}</div>`;
@@ -1307,9 +1378,10 @@ async function renderTimeline(projectId){
     await renderTimeline(projectId);
   }));
   $$("[data-delreq]", box).forEach(b => b.addEventListener("click", () => {
-    openConfirm("確定要刪除這筆需求紀錄嗎？附加的圖片也會一起移除。", async () => {
+    openConfirm("確定要刪除這筆需求紀錄嗎？附加的圖片和檔案也會一起移除。", async () => {
       const r = state.reqs.find(x => x.id === b.dataset.delreq);
       for(const imgId of (r.images || [])) await dbDel("images", imgId);
+      for(const fileId of (r.files || [])) await dbDel("files", fileId);
       await dbDel("reqs", r.id);
       if(state.editingReqId === r.id) resetReqForm();
       await loadAll();
@@ -1491,7 +1563,8 @@ function toMarkdown(){
         const c = r.sourceContactId ? state.contacts.find(x => x.id === r.sourceContactId) : null;
         const who = r.sourceContactId ? ` @${(c ? c.name : r.sourceName || "").replace(/\s/g,"")}` : "";
         const imgs = (r.images || []).length ? `（附圖 ${r.images.length} 張，需用 JSON 備份）` : "";
-        L.push(`- [${r.done ? "x" : " "}] ${r.date}${who} ${(r.content||"").replace(/\n/g," ")}${imgs}`);
+        const docs = (r.files || []).length ? `（附檔 ${r.files.length} 個，需用 JSON 備份）` : "";
+        L.push(`- [${r.done ? "x" : " "}] ${r.date}${who} ${(r.content||"").replace(/\n/g," ")}${imgs}${docs}`);
       });
     }
     L.push("");
@@ -1623,7 +1696,7 @@ async function importMarkdown(text){
         id: uid(), projectId: rec.id,
         date: q.date || new Date().toISOString().slice(0,10),
         sourceContactId: c ? c.id : "", sourceName: c ? c.name : "",
-        content: q.content, images: [], done: !!q.done, createdAt: now,
+        content: q.content, images: [], files: [], done: !!q.done, createdAt: now,
       });
       r.rNew++;
     }
@@ -1682,9 +1755,12 @@ $("#btn-export").addEventListener("click", async () => {
   const images = await dbAll("images");
   const packed = [];
   for(const im of images) packed.push({ id: im.id, name: im.name, type: im.type, data: await blobToDataUrl(im.blob) });
+  const files = await dbAll("files");
+  const packedFiles = [];
+  for(const f of files) packedFiles.push({ id: f.id, name: f.name, type: f.type, data: await blobToDataUrl(f.blob) });
   const payload = {
-    app: "project-desk", version: 2, exportedAt: new Date().toISOString(),
-    projects: state.projects, reqs: state.reqs, contacts: state.contacts, images: packed,
+    app: "project-desk", version: 3, exportedAt: new Date().toISOString(),
+    projects: state.projects, reqs: state.reqs, contacts: state.contacts, images: packed, files: packedFiles,
   };
   const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
   const a = document.createElement("a");
@@ -1707,12 +1783,14 @@ $("#file-import").addEventListener("change", async e => {
     toast("檔案格式不符，請選擇 Project Desk 匯出的備份"); return;
   }
   openConfirm(`即將匯入 ${data.projects.length} 個專案，並覆蓋目前全部資料。建議先匯出一份現有備份。要繼續嗎？`, async () => {
-    await dbClear("projects"); await dbClear("reqs"); await dbClear("images"); await dbClear("contacts");
+    await dbClear("projects"); await dbClear("reqs"); await dbClear("images"); await dbClear("files"); await dbClear("contacts");
     for(const p of data.projects) await dbPut("projects", p);
     for(const c of (data.contacts || [])) await dbPut("contacts", c);
     for(const r of (data.reqs || [])) await dbPut("reqs", r);
     for(const im of (data.images || []))
       await dbPut("images", { id: im.id, name: im.name, type: im.type, blob: await dataUrlToBlob(im.data) });
+    for(const f of (data.files || []))
+      await dbPut("files", { id: f.id, name: f.name, type: f.type, blob: await dataUrlToBlob(f.data) });
     urlCache.forEach(u => URL.revokeObjectURL(u));
     urlCache.clear();
     await loadAll();
