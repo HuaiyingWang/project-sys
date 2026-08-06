@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Desk — 接案專案管理</title>
+<style>
+:root{
+  --bg:#F7F3EC; --surface:#FFFFFF; --surface-2:#FCF9F4;
+  --ink:#2B241D; --ink-2:#5C5148; --muted:#8D8175;
+  --line:#EBE3D7; --line-2:#D9CDBC;
+  --accent:#A64B1B; --accent-soft:#FBECE2; --accent-ink:#82370F;
+  --ok:#5F7B2C; --ok-soft:#EFF3DF;
+  --live:#96700A; --live-soft:#FAF0D6;
+  --warn:#BC6224; --warn-soft:#FCEEE3;
+  --alert:#9A6206; --alert-soft:#FAEED7;
+  --off:#8D8175; --off-soft:#F2EDE5;
+  --danger:#AE2A1D; --danger-soft:#FBE9E5;
+  --radius:8px; --radius-lg:12px;
+  --shadow:0 1px 2px rgba(90,64,38,.05), 0 1px 3px rgba(90,64,38,.07);
+  --font:"Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,"Noto Sans TC",monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font);
+  font-size:18px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+button,input,select,textarea{font:inherit; color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:absolute;left:-999px;top:8px;z-index:99;background:var(--surface);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--line-2)}
+.skip:focus{left:8px}
+
+/* ---------- 版面骨架 ---------- */
+.app{max-width:1260px;margin:0 auto;padding:0 20px 72px}
+.masthead{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:22px 0 18px;border-bottom:1px solid var(--line);margin-bottom:22px;
+}
+.masthead__brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.masthead__title{font-size:21px;font-weight:650;letter-spacing:-.01em;margin:0}
+.masthead__sub{font-size:13.5px;color:var(--muted);font-family:var(--mono)}
+
+/* ---------- 按鈕 ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 17px;border-radius:var(--radius);
+  border:1px solid var(--line-2);background:var(--surface);color:var(--ink);
+  font-size:16px;font-weight:500;cursor:pointer;
+  transition:background .14s ease,border-color .14s ease,transform .08s ease;
+}
+.btn:hover{background:var(--surface-2);border-color:var(--muted)}
+.btn:active{transform:translateY(1px)}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn--primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+.btn--danger{color:var(--danger);border-color:var(--line-2)}
+.btn--danger:hover{background:var(--danger-soft);border-color:var(--danger)}
+.btn--ghost{border-color:transparent;background:transparent}
+.btn--ghost:hover{background:var(--surface-2);border-color:var(--line)}
+.btn--sm{padding:7px 13px;font-size:15px}
+.btn__ico{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- 工具列 ---------- */
+.toolbar{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+.toolbar__row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search{position:relative;flex:1 1 260px;min-width:200px}
+.search__ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:1.7;pointer-events:none}
+.search__input{
+  width:100%;padding:11px 14px 11px 40px;border-radius:var(--radius);
+  border:1px solid var(--line-2);background:var(--surface);
+}
+.search__input::placeholder{color:var(--muted)}
+.select{padding:11px 14px;border-radius:var(--radius);border:1px solid var(--line-2);background:var(--surface);cursor:pointer}
+
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{
+  padding:7px 15px;border-radius:999px;border:1px solid var(--line-2);
+  background:var(--surface);font-size:15px;cursor:pointer;
+  transition:background .14s ease,border-color .14s ease,transform .08s ease;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.chip:hover{background:var(--surface-2);border-color:var(--muted)}
+.chip:active{transform:translateY(1px)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.chip__count{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.chip[aria-pressed="true"] .chip__count{color:var(--accent-ink)}
+
+.resultbar{font-size:15px;color:var(--muted);font-family:var(--mono)}
+
+/* ---------- 列表 ---------- */
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden}
+.tbl{width:100%;border-collapse:collapse;font-size:16px}
+.tbl caption{text-align:left;padding:0;position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.tbl th{
+  text-align:left;font-weight:500;font-size:13.5px;letter-spacing:.04em;
+  color:var(--muted);text-transform:uppercase;
+  padding:13px 16px;border-bottom:1px solid var(--line);background:var(--surface-2);
+}
+.tbl td{padding:15px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl tbody tr{transition:background .12s ease;cursor:pointer}
+.tbl tbody tr:hover{background:var(--surface-2)}
+.tbl tbody tr:active{background:var(--accent-soft)}
+
+.rail{border-left:3px solid transparent;padding-left:11px}
+.rail--soon{border-left-color:var(--alert)}
+.rail--over{border-left-color:var(--danger)}
+
+.cell-created{font-family:var(--mono);font-size:14px;color:var(--muted);white-space:nowrap}
+.cell-name{
+  font-weight:550;color:var(--ink);display:block;text-align:left;
+  background:none;border:0;padding:0;font-family:inherit;font-size:16px;cursor:pointer;
+}
+.cell-name:hover{color:var(--accent);text-decoration:underline}
+.cell-contact{font-size:14px;color:var(--muted);display:block;margin-top:1px}
+.cell-link{
+  display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--accent);
+  text-decoration:none;font-family:var(--mono);margin-top:2px;
+}
+.cell-link:hover{text-decoration:underline}
+.cell-sub{font-size:15px;color:var(--ink-2)}
+.cell-date{font-family:var(--mono);font-size:15px;color:var(--ink-2)}
+.cell-date--soon{color:var(--alert);font-weight:550}
+.cell-date--over{color:var(--danger);font-weight:550}
+
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;
+  font-size:14px;font-weight:500;white-space:nowrap;
+}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.badge--doing{background:var(--ok-soft);color:var(--ok)}
+.badge--live{background:var(--live-soft);color:var(--live)}
+.badge--maint{background:var(--warn-soft);color:var(--warn)}
+.badge--off{background:var(--off-soft);color:var(--off)}
+
+.pill-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:28px;height:28px;padding:0 8px;border-radius:999px;
+  font-family:var(--mono);font-size:14px;font-weight:600;
+}
+.pill-count--zero{background:var(--off-soft);color:var(--muted);font-weight:400}
+.pill-count--some{background:var(--danger-soft);color:var(--danger)}
+
+.empty{padding:56px 24px;text-align:center}
+.empty__title{font-size:19px;font-weight:600;margin:0 0 6px}
+.empty__body{color:var(--muted);font-size:16px;margin:0 0 18px}
+
+/* ---------- 手機：表格轉卡片 ---------- */
+@media (max-width:960px){
+  .tbl thead{display:none}
+  .tbl,.tbl tbody,.tbl td{display:block;width:100%}
+  .tbl tr{display:flex;flex-direction:column;border-bottom:1px solid var(--line);padding:14px}
+  .tbl tbody tr:last-child{border-bottom:0}
+  .tbl td{border:0;padding:3px 0;display:flex;justify-content:space-between;gap:14px;align-items:center}
+  .tbl td::before{content:attr(data-label);font-size:13.5px;color:var(--muted);flex:none}
+  .tbl td.td-name{display:block;order:-1;padding-bottom:8px}
+  .tbl td.td-name::before{display:none}
+  .rail{border-left:0;padding-left:0}
+  .tbl tbody tr.row--soon{border-left:3px solid var(--alert)}
+  .tbl tbody tr.row--over{border-left:3px solid var(--danger)}
+}
+
+/* ---------- 詳細頁 ---------- */
+.detail__top{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.detail__title{font-size:30px;font-weight:650;letter-spacing:-.02em;margin:0}
+.detail__meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;color:var(--ink-2);font-size:16px}
+.detail__actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.tab{
+  padding:11px 17px;border:0;background:transparent;cursor:pointer;font-size:16px;
+  color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color .14s ease,border-color .14s ease;
+}
+.tab:hover{color:var(--ink);border-bottom-color:var(--line-2)}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:550}
+
+.panel[hidden]{display:none}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden}
+.field{background:var(--surface);padding:15px 18px}
+.field__label{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.field__value{font-size:17px;word-break:break-word}
+.field__value--mono{font-family:var(--mono);font-size:15.5px}
+.field__value a{color:var(--accent);text-decoration:none}
+.field__value a:hover{text-decoration:underline}
+.field__value--empty{color:var(--muted)}
+.note-block{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px;white-space:pre-wrap;font-size:17px}
+
+.warnbar{
+  display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:var(--radius);
+  font-size:15.5px;margin-bottom:16px;
+}
+.warnbar--soon{background:var(--alert-soft);color:var(--alert)}
+.warnbar--over{background:var(--danger-soft);color:var(--danger)}
+
+/* ---------- 需求紀錄 ---------- */
+.reqform{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px;margin-bottom:24px}
+.reqform__row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.ta{
+  width:100%;min-height:96px;resize:vertical;padding:12px 14px;border-radius:var(--radius);
+  border:1px solid var(--line-2);background:var(--surface-2);font-size:17px;line-height:1.6;
+}
+.ta::placeholder{color:var(--muted)}
+.ta:focus{background:var(--surface)}
+.dropzone{border-color:var(--accent) !important;background:var(--accent-soft) !important}
+.reqform__hint{font-size:14px;color:var(--muted);margin:8px 0 0}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.thumb{position:relative;width:74px;height:74px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line-2);background:var(--surface-2)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb__x{
+  position:absolute;top:2px;right:2px;width:19px;height:19px;border-radius:50%;
+  border:0;background:rgba(0,0,0,.62);color:#fff;font-size:13.5px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.thumb__x:hover{background:var(--danger)}
+.thumb--btn{padding:0;cursor:pointer}
+.thumb--btn:hover{border-color:var(--accent)}
+
+.timeline{position:relative;padding-left:26px}
+.timeline::before{content:"";position:absolute;left:6px;top:8px;bottom:8px;width:1px;background:var(--line-2)}
+.tl-item{position:relative;padding:0 0 22px}
+.tl-item::before{
+  content:"";position:absolute;left:-24px;top:7px;width:11px;height:11px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--accent);
+}
+.tl-item--done::before{background:var(--ok);border-color:var(--ok)}
+.tl-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:5px}
+.tl-date{font-family:var(--mono);font-size:14px;color:var(--muted)}
+.tag{padding:2px 8px;border-radius:4px;font-size:13.5px;font-weight:500}
+.tag--boss{background:var(--alert-soft);color:var(--alert)}
+.tag--client{background:var(--accent-soft);color:var(--accent-ink)}
+.tag--contact{background:var(--accent-soft);color:var(--accent-ink)}
+.tag--self{background:var(--off-soft);color:var(--off)}
+.tl-body{white-space:pre-wrap;font-size:17px;line-height:1.65}
+.tl-item--done .tl-body{color:var(--muted);text-decoration:line-through}
+.tl-tools{display:flex;gap:6px;margin-left:auto}
+.tl-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;font-size:15.5px;color:var(--ink-2)}
+.tl-bar label{display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.tl-bar input{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+.tl-summary{color:var(--muted);font-family:var(--mono);font-size:14px}
+.field--cta{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* ---------- 對話框 ---------- */
+dialog{
+  border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface);color:var(--ink);
+  padding:0;max-width:720px;width:calc(100% - 32px);box-shadow:0 12px 40px rgba(16,24,40,.18);
+}
+dialog::backdrop{background:rgba(16,20,26,.5)}
+.dlg__head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dlg__title{font-size:19px;font-weight:600;margin:0;flex:1}
+.dlg__body{padding:20px;max-height:min(64vh,560px);overflow-y:auto}
+.dlg__foot{display:flex;gap:9px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.form-grid--full{grid-column:1/-1}
+.lbl{display:block;font-size:14px;color:var(--ink-2);margin-bottom:5px;font-weight:500}
+.inp{
+  width:100%;padding:11px 13px;border-radius:var(--radius);
+  border:1px solid var(--line-2);background:var(--surface-2);font-size:17px;
+}
+.inp:focus{background:var(--surface)}
+.fset{border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 16px;margin:0 0 16px}
+.fset legend{font-size:13.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0 6px}
+.hint{font-size:14px;color:var(--muted);margin:6px 0 0}
+
+/* ---------- 聯絡窗口清單 ---------- */
+.clist{border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden}
+.crow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.crow:last-child{border-bottom:0}
+.crow:hover{background:var(--surface-2)}
+.crow__main{flex:1;min-width:0}
+.crow__name{font-weight:550;font-size:17px}
+.crow__org{font-size:15px;color:var(--ink-2)}
+.crow__meta{font-family:var(--mono);font-size:14px;color:var(--muted);margin-top:2px;word-break:break-all}
+.crow__tools{display:flex;gap:6px;flex:none}
+.crow__used{font-family:var(--mono);font-size:13px;color:var(--muted);flex:none}
+.picker{display:flex;gap:8px;align-items:flex-end}
+.picker .inp{flex:1}
+.lightbox{max-width:min(94vw,1100px);width:auto}
+.lightbox img{display:block;max-width:100%;max-height:78vh}
+
+/* ---------- 提示條 ---------- */
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);
+  background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;
+  font-size:16px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:60;
+}
+.toast--on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主要內容</a>
+
+<div class="app">
+  <header class="masthead">
+    <div class="masthead__brand">
+      <h1 class="masthead__title">Project Desk</h1>
+      <span class="masthead__sub">接案專案管理</span>
+    </div>
+    <button class="btn btn--ghost btn--sm" id="btn-contacts" type="button">
+      <svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1"/><circle cx="10" cy="7" r="3.2"/><path d="M17 11h4M19 9v4"/></svg>
+      聯絡窗口
+    </button>
+    <button class="btn btn--ghost btn--sm" id="btn-export" type="button">
+      <svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      匯出備份
+    </button>
+    <button class="btn btn--ghost btn--sm" id="btn-import" type="button">
+      <svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg>
+      匯入備份
+    </button>
+    <input type="file" id="file-import" accept="application/json" class="sr-only" tabindex="-1">
+    <button class="btn btn--ghost btn--sm" id="btn-md" type="button">
+      <svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M7 15V9l2.5 3L12 9v6M16 9v4m0 0l-1.5-1.5M16 13l1.5-1.5"/></svg>
+      Markdown
+    </button>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ 列表頁 ============ -->
+    <section id="view-list" aria-labelledby="list-h">
+      <h2 id="list-h" class="sr-only">專案列表</h2>
+
+      <div class="toolbar">
+        <div class="toolbar__row">
+          <div class="search">
+            <svg class="search__ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <label class="sr-only" for="q">搜尋專案</label>
+            <input class="search__input" id="q" type="search" placeholder="搜尋專案名稱、業務、網域或備註" autocomplete="off">
+          </div>
+          <label class="sr-only" for="sort">排序方式</label>
+          <select class="select" id="sort">
+            <option value="updated">最近更新</option>
+            <option value="created">建立日期</option>
+            <option value="expiry">維護到期日</option>
+            <option value="name">名稱</option>
+            <option value="client">業務</option>
+            <option value="reqs">待辦需求數</option>
+          </select>
+          <button class="btn btn--primary" id="btn-new" type="button">
+            <svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            新增專案
+          </button>
+        </div>
+        <div class="toolbar__row">
+          <div class="chips" id="chips" role="group" aria-label="依狀態篩選"></div>
+        </div>
+        <p class="resultbar" id="resultbar" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="sheet" id="list-sheet"></div>
+    </section>
+
+    <!-- ============ 詳細頁 ============ -->
+    <section id="view-detail" aria-labelledby="detail-title" hidden></section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ============ 專案編輯 ============ -->
+<dialog id="dlg-project" aria-labelledby="dlg-project-title">
+  <form method="dialog" id="form-project">
+    <div class="dlg__head">
+      <h2 class="dlg__title" id="dlg-project-title">新增專案</h2>
+      <button class="btn btn--ghost btn--sm" type="button" data-close aria-label="關閉">✕</button>
+    </div>
+    <div class="dlg__body">
+      <fieldset class="fset">
+        <legend>基本資料</legend>
+        <div class="form-grid">
+          <div class="form-grid--full">
+            <label class="lbl" for="f-name">專案名稱 <span aria-hidden="true">*</span></label>
+            <input class="inp" id="f-name" name="name" required maxlength="120">
+          </div>
+          <div>
+            <label class="lbl" for="f-status">狀態</label>
+            <select class="inp" id="f-status" name="status"></select>
+          </div>
+          <div>
+            <label class="lbl" for="f-client">業務</label>
+            <input class="inp" id="f-client" name="client" maxlength="80">
+          </div>
+          <div class="form-grid--full">
+            <label class="lbl" for="f-contact">聯絡窗口</label>
+            <div class="picker">
+              <select class="inp" id="f-contact" name="contactId"></select>
+              <button class="btn" type="button" id="btn-add-contact">新增窗口</button>
+            </div>
+            <p class="hint" id="contact-preview">電話與信箱跟著窗口資料走，改一次全部專案都會更新。</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="fset">
+        <legend>技術資訊</legend>
+        <div class="form-grid">
+          <div>
+            <label class="lbl" for="f-domain">正式網域</label>
+            <input class="inp" id="f-domain" name="domain" placeholder="example.com.tw">
+          </div>
+          <div>
+            <label class="lbl" for="f-test">測試站網址</label>
+            <input class="inp" id="f-test" name="testUrl" placeholder="test.example.com.tw">
+          </div>
+          <div>
+            <label class="lbl" for="f-admin">後台網址</label>
+            <input class="inp" id="f-admin" name="adminUrl">
+          </div>
+          <div>
+            <label class="lbl" for="f-host">主機商 / 主機</label>
+            <input class="inp" id="f-host" name="host">
+          </div>
+          <div>
+            <label class="lbl" for="f-ftphost">FTP 位址</label>
+            <input class="inp" id="f-ftphost" name="ftpHost">
+          </div>
+          <div>
+            <label class="lbl" for="f-ftpuser">FTP 帳號</label>
+            <input class="inp" id="f-ftpuser" name="ftpUser">
+          </div>
+          <div class="form-grid--full">
+            <label class="lbl" for="f-ftpnote">密碼存放位置</label>
+            <input class="inp" id="f-ftpnote" name="ftpNote" placeholder="例：1Password「中興應用」項目">
+            <p class="hint">這裡只記「密碼放在哪」。密碼本體請留在密碼管理工具，不要輸入到這個欄位。</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="fset">
+        <legend>日期與備註</legend>
+        <div class="form-grid">
+          <div>
+            <label class="lbl" for="f-launch">上線日期</label>
+            <input class="inp" id="f-launch" name="launchDate" type="date">
+          </div>
+          <div>
+            <label class="lbl" for="f-expiry">維護到期日</label>
+            <input class="inp" id="f-expiry" name="expiryDate" type="date">
+          </div>
+          <div class="form-grid--full">
+            <label class="lbl" for="f-tags">標籤</label>
+            <input class="inp" id="f-tags" name="tags" placeholder="WordPress, RWD, 政府案　以逗號分隔">
+          </div>
+          <div class="form-grid--full">
+            <label class="lbl" for="f-note">備註</label>
+            <textarea class="inp ta" id="f-note" name="note"></textarea>
+          </div>
+        </div>
+      </fieldset>
+    </div>
+    <div class="dlg__foot">
+      <button class="btn" type="button" data-close>取消</button>
+      <button class="btn btn--primary" type="submit" id="btn-save-project">儲存專案</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ 聯絡窗口清單 ============ -->
+<dialog id="dlg-contacts" aria-labelledby="dlg-contacts-title">
+  <div class="dlg__head">
+    <h2 class="dlg__title" id="dlg-contacts-title">聯絡窗口</h2>
+    <button class="btn btn--ghost btn--sm" type="button" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg__body" id="contacts-body"></div>
+  <div class="dlg__foot">
+    <button class="btn btn--primary" type="button" id="btn-new-contact">新增窗口</button>
+  </div>
+</dialog>
+
+<!-- ============ 聯絡窗口編輯 ============ -->
+<dialog id="dlg-contact" aria-labelledby="dlg-contact-title">
+  <form method="dialog" id="form-contact">
+    <div class="dlg__head">
+      <h2 class="dlg__title" id="dlg-contact-title">新增窗口</h2>
+      <button class="btn btn--ghost btn--sm" type="button" data-close aria-label="關閉">✕</button>
+    </div>
+    <div class="dlg__body">
+      <div class="form-grid">
+        <div>
+          <label class="lbl" for="c-name">姓名 <span aria-hidden="true">*</span></label>
+          <input class="inp" id="c-name" name="name" required maxlength="60">
+        </div>
+        <div>
+          <label class="lbl" for="c-org">所屬單位</label>
+          <input class="inp" id="c-org" name="org" maxlength="80">
+        </div>
+        <div>
+          <label class="lbl" for="c-title">職稱</label>
+          <input class="inp" id="c-title" name="title" maxlength="60">
+        </div>
+        <div>
+          <label class="lbl" for="c-phone">電話</label>
+          <input class="inp" id="c-phone" name="phone" type="tel" maxlength="40">
+        </div>
+        <div class="form-grid--full">
+          <label class="lbl" for="c-email">信箱</label>
+          <input class="inp" id="c-email" name="email" type="email" maxlength="120">
+        </div>
+        <div class="form-grid--full">
+          <label class="lbl" for="c-note">備註</label>
+          <textarea class="inp ta" id="c-note" name="note" style="min-height:64px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dlg__foot">
+      <button class="btn" type="button" data-close>取消</button>
+      <button class="btn btn--primary" type="submit">儲存窗口</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ Markdown ============ -->
+<dialog id="dlg-md" aria-labelledby="dlg-md-title" style="max-width:900px">
+  <div class="dlg__head">
+    <h2 class="dlg__title" id="dlg-md-title">Markdown 匯出入</h2>
+    <button class="btn btn--ghost btn--sm" type="button" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg__body">
+    <p class="hint" style="margin:0 0 12px">
+      貼上 Markdown 匯入會<strong>累加</strong>資料，不會清空現有內容。同名的專案與窗口會被更新而非重複建立。
+      圖片無法透過 Markdown 傳遞，完整備份請用 JSON。
+    </p>
+    <label class="lbl" for="md-text">內容</label>
+    <textarea class="inp ta" id="md-text" spellcheck="false"
+      style="min-height:340px;font-family:var(--mono);font-size:14px;line-height:1.7"
+      placeholder="# 專案&#10;&#10;## 中興應用&#10;- 狀態: 已上線&#10;- 業務: 中興大學&#10;- 窗口: 王雅婷&#10;- 網域: app.nchu.edu.tw&#10;- 到期日: 2026-11-20&#10;&#10;### 需求&#10;- [ ] 2026-08-03 @王雅婷 首頁 banner 要換成新版"></textarea>
+    <p class="hint" id="md-status"></p>
+  </div>
+  <div class="dlg__foot">
+    <button class="btn" type="button" id="md-fill">帶入目前資料</button>
+    <button class="btn" type="button" id="md-copy">複製</button>
+    <button class="btn" type="button" id="md-download">下載 .md</button>
+    <button class="btn btn--primary" type="button" id="md-import">匯入上方內容</button>
+  </div>
+</dialog>
+
+<!-- ============ 確認刪除 ============ -->
+<dialog id="dlg-confirm" aria-labelledby="dlg-confirm-title">
+  <div class="dlg__head"><h2 class="dlg__title" id="dlg-confirm-title">確認刪除</h2></div>
+  <div class="dlg__body"><p id="dlg-confirm-body" style="margin:0"></p></div>
+  <div class="dlg__foot">
+    <button class="btn" type="button" id="confirm-no">取消</button>
+    <button class="btn btn--danger" type="button" id="confirm-yes">刪除</button>
+  </div>
+</dialog>
+
+<!-- ============ 圖片檢視 ============ -->
+<dialog id="dlg-image" class="lightbox" aria-label="圖片檢視">
+  <div class="dlg__head">
+    <h2 class="dlg__title" id="dlg-image-title">圖片</h2>
+    <button class="btn btn--ghost btn--sm" type="button" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg__body" style="padding:0"><img id="dlg-image-img" alt=""></div>
+</dialog>
+
+<script>
+"use strict";
+
+/* ═══════════ 常數 ═══════════ */
+const STATUSES = [
+  { key:"doing", label:"進行中", cls:"badge--doing" },
+  { key:"live",  label:"已上線", cls:"badge--live"  },
+  { key:"maint", label:"維護中", cls:"badge--maint" },
+  { key:"off",   label:"已停用", cls:"badge--off"   },
+];
+/* 舊版的固定來源，僅用於顯示既有紀錄 */
+const LEGACY_SOURCES = [
+  { key:"boss",   label:"老闆", cls:"tag--boss"   },
+  { key:"client", label:"業務", cls:"tag--client" },
+  { key:"self",   label:"我自己", cls:"tag--self" },
+];
+const SOON_DAYS = 30;
+const DB_NAME = "project_desk";
+const DB_VER  = 2;
+
+/* ═══════════ IndexedDB ═══════════ */
+let db;
+function openDB(){
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = e => {
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains("projects")) d.createObjectStore("projects",{keyPath:"id"});
+      if(!d.objectStoreNames.contains("reqs")){
+        const s = d.createObjectStore("reqs",{keyPath:"id"});
+        s.createIndex("projectId","projectId",{unique:false});
+      }
+      if(!d.objectStoreNames.contains("images")) d.createObjectStore("images",{keyPath:"id"});
+      if(!d.objectStoreNames.contains("contacts")) d.createObjectStore("contacts",{keyPath:"id"});
+    };
+    r.onsuccess = e => { db = e.target.result; resolve(db); };
+    r.onerror   = () => reject(r.error);
+  });
+}
+const store = (name, mode="readonly") => db.transaction(name, mode).objectStore(name);
+const wrap  = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+
+const dbAll    = name        => wrap(store(name).getAll());
+const dbGet    = (name, id)  => wrap(store(name).get(id));
+const dbPut    = (name, val) => wrap(store(name,"readwrite").put(val));
+const dbDel    = (name, id)  => wrap(store(name,"readwrite").delete(id));
+const dbClear   = name       => wrap(store(name,"readwrite").clear());
+const dbByIndex = (name, idx, val) => wrap(store(name).index(idx).getAll(val));
+
+/* ═══════════ 狀態 ═══════════ */
+const state = {
+  projects: [], reqs: [], contacts: [],
+  filter: { q:"", status:"all" },
+  sort: "updated",
+  currentId: null,
+  tab: "basic",
+  draftImages: [],
+  editingReqId: null,
+  reqOnlyOpen: false,
+};
+const urlCache = new Map();
+
+/* ═══════════ 小工具 ═══════════ */
+const $  = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,9);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+function statusOf(key){ return STATUSES.find(s => s.key === key) || STATUSES[0]; }
+/* 需求來源：優先讀聯絡窗口，讀不到才退回舊版固定值 */
+function reqSource(r){
+  if(r.sourceContactId){
+    const c = state.contacts.find(x => x.id === r.sourceContactId);
+    if(c) return { label: c.name, cls: "tag--contact" };
+    return { label: (r.sourceName ? r.sourceName + "（已移除）" : "已移除的窗口"), cls: "tag--self" };
+  }
+  const s = LEGACY_SOURCES.find(x => x.key === r.source);
+  return s || { label: "我自己", cls: "tag--self" };
+}
+
+function fmtDay(ms){
+  if(!ms) return "—";
+  const d = new Date(ms);
+  if(isNaN(d)) return "—";
+  const p2 = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+}
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const d = new Date(dateStr + "T00:00:00");
+  if(isNaN(d)) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((d - today) / 86400000);
+}
+function expiryLevel(dateStr, status){
+  if(status === "off") return "";
+  const d = daysUntil(dateStr);
+  if(d === null) return "";
+  if(d < 0) return "over";
+  if(d <= SOON_DAYS) return "soon";
+  return "";
+}
+function normUrl(v){
+  if(!v) return "";
+  return /^https?:\/\//i.test(v) ? v : "https://" + v;
+}
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("toast--on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("toast--on"), 2600);
+}
+function objectUrl(id, blob){
+  if(!urlCache.has(id)) urlCache.set(id, URL.createObjectURL(blob));
+  return urlCache.get(id);
+}
+function openConfirm(message, onYes){
+  const dlg = $("#dlg-confirm");
+  $("#dlg-confirm-body").textContent = message;
+  const yes = $("#confirm-yes");
+  const fresh = yes.cloneNode(true);
+  yes.replaceWith(fresh);
+  fresh.addEventListener("click", () => { dlg.close(); onYes(); });
+  dlg.showModal();
+  fresh.focus();
+}
+$("#confirm-no").addEventListener("click", () => $("#dlg-confirm").close());
+$$("[data-close]").forEach(b => b.addEventListener("click", e => e.target.closest("dialog").close()));
+
+/* ═══════════ 讀取資料 ═══════════ */
+async function loadAll(){
+  state.projects = await dbAll("projects");
+  state.reqs     = await dbAll("reqs");
+  state.contacts = (await dbAll("contacts")).sort((a,b) => a.name.localeCompare(b.name, "zh-Hant"));
+}
+/* 解析專案的聯絡窗口。舊資料曾把姓名電話直接存在專案上，這裡一併相容。 */
+function contactOf(p){
+  if(p.contactId){
+    const c = state.contacts.find(x => x.id === p.contactId);
+    if(c) return c;
+  }
+  if(p.contact || p.phone || p.email)
+    return { id:null, name:p.contact || "", org:"", title:"", phone:p.phone || "", email:p.email || "", legacy:true };
+  return null;
+}
+function contactLabel(c){
+  if(!c) return "";
+  return c.org ? `${c.name}（${c.org}）` : c.name;
+}
+function contactUseCount(id){
+  return state.projects.filter(p => p.contactId === id).length;
+}
+function sourceOptions(selectedId){
+  return `<option value="">我自己</option>` + state.contacts.map(c =>
+    `<option value="${c.id}"${c.id === selectedId ? " selected" : ""}>${esc(contactLabel(c))}</option>`).join("");
+}
+function defaultSourceId(){
+  const p = state.projects.find(x => x.id === state.currentId);
+  return p && p.contactId && state.contacts.some(c => c.id === p.contactId) ? p.contactId : "";
+}
+function openReqCount(projectId){
+  return state.reqs.filter(r => r.projectId === projectId && !r.done).length;
+}
+
+/* ═══════════ 列表頁 ═══════════ */
+function visibleProjects(){
+  const q = state.filter.q.trim().toLowerCase();
+  let list = state.projects.filter(p => {
+    if(state.filter.status !== "all" && p.status !== state.filter.status) return false;
+    if(!q) return true;
+    const c = contactOf(p);
+    return [p.name, p.client, p.domain, p.testUrl, p.host, p.note, (p.tags||[]).join(" "), c && c.name, c && c.org]
+      .some(v => String(v||"").toLowerCase().includes(q));
+  });
+  const cmp = {
+    updated: (a,b) => (b.updatedAt||0) - (a.updatedAt||0),
+    created: (a,b) => (b.createdAt||0) - (a.createdAt||0),
+    name:    (a,b) => a.name.localeCompare(b.name, "zh-Hant"),
+    client:  (a,b) => String(a.client||"").localeCompare(String(b.client||""), "zh-Hant"),
+    reqs:    (a,b) => openReqCount(b.id) - openReqCount(a.id),
+    expiry:  (a,b) => {
+      const da = a.expiryDate ? new Date(a.expiryDate) : Infinity;
+      const dbb = b.expiryDate ? new Date(b.expiryDate) : Infinity;
+      return da - dbb;
+    },
+  }[state.sort];
+  return list.sort(cmp);
+}
+
+function renderChips(){
+  const counts = { all: state.projects.length };
+  STATUSES.forEach(s => counts[s.key] = state.projects.filter(p => p.status === s.key).length);
+  const items = [{ key:"all", label:"全部" }, ...STATUSES];
+  $("#chips").innerHTML = items.map(s => `
+    <button class="chip" type="button" data-status="${s.key}" aria-pressed="${state.filter.status === s.key}">
+      ${esc(s.label)}<span class="chip__count">${counts[s.key]}</span>
+    </button>`).join("");
+}
+
+function renderList(){
+  renderChips();
+  const rows = visibleProjects();
+  $("#resultbar").textContent = state.projects.length
+    ? `顯示 ${rows.length} / ${state.projects.length} 個專案`
+    : "";
+
+  if(!state.projects.length){
+    $("#list-sheet").innerHTML = `
+      <div class="empty">
+        <p class="empty__title">建立你的第一個專案</p>
+        <p class="empty__body">把手上的案子放進來，之後就能追蹤狀態、到期日和客戶的需求。</p>
+        <button class="btn btn--primary" type="button" onclick="document.getElementById('btn-new').click()">新增專案</button>
+      </div>`;
+    return;
+  }
+  if(!rows.length){
+    $("#list-sheet").innerHTML = `
+      <div class="empty">
+        <p class="empty__title">沒有符合的專案</p>
+        <p class="empty__body">換個關鍵字，或把狀態篩選切回「全部」。</p>
+      </div>`;
+    return;
+  }
+
+  $("#list-sheet").innerHTML = `
+    <table class="tbl">
+      <caption>專案列表，共 ${rows.length} 筆</caption>
+      <thead>
+        <tr>
+          <th scope="col">建立日期</th>
+          <th scope="col">專案名稱</th>
+          <th scope="col">業務</th>
+          <th scope="col">狀態</th>
+          <th scope="col">維護到期</th>
+          <th scope="col">待辦需求</th>
+        </tr>
+      </thead>
+      <tbody>${rows.map(rowHTML).join("")}</tbody>
+    </table>`;
+
+  $$("#list-sheet tbody tr").forEach(tr => {
+    tr.addEventListener("click", e => {
+      if(e.target.closest("a")) return;
+      openDetail(tr.dataset.id);
+    });
+  });
+}
+
+function rowHTML(p){
+  const st = statusOf(p.status);
+  const lv = expiryLevel(p.expiryDate, p.status);
+  const n  = openReqCount(p.id);
+  const d  = daysUntil(p.expiryDate);
+  let dateText = "—";
+  if(p.expiryDate){
+    dateText = p.expiryDate;
+    if(lv === "over") dateText += `（逾期 ${Math.abs(d)} 天）`;
+    else if(lv === "soon") dateText += `（剩 ${d} 天）`;
+  }
+  const link = p.domain
+    ? `<a class="cell-link" href="${esc(normUrl(p.domain))}" target="_blank" rel="noopener">${esc(p.domain)} ↗</a>`
+    : "";
+  const ct = contactOf(p);
+  return `
+    <tr data-id="${p.id}" class="${lv ? "row--" + lv : ""}">
+      <td class="td-created" data-label="建立日期">
+        <span class="rail ${lv ? "rail--" + lv : ""}">
+          <span class="cell-created">${fmtDay(p.createdAt)}</span>
+        </span>
+      </td>
+      <td class="td-name" data-label="專案名稱">
+        <button class="cell-name" type="button">${esc(p.name)}</button>
+        ${link}
+      </td>
+      <td data-label="業務">
+        <span class="cell-sub">${esc(p.client) || "—"}</span>
+        ${ct && ct.name ? `<span class="cell-contact">窗口 ${esc(ct.name)}</span>` : ""}
+      </td>
+      <td data-label="狀態"><span class="badge ${st.cls}">${st.label}</span></td>
+      <td data-label="維護到期"><span class="cell-date ${lv ? "cell-date--" + lv : ""}">${esc(dateText)}</span></td>
+      <td data-label="待辦需求"><span class="pill-count ${n ? "pill-count--some" : "pill-count--zero"}">${n}</span></td>
+    </tr>`;
+}
+
+$("#q").addEventListener("input", e => { state.filter.q = e.target.value; renderList(); });
+$("#sort").addEventListener("change", e => { state.sort = e.target.value; renderList(); });
+$("#chips").addEventListener("click", e => {
+  const b = e.target.closest("[data-status]");
+  if(!b) return;
+  state.filter.status = b.dataset.status;
+  renderList();
+});
+
+/* ═══════════ 專案表單 ═══════════ */
+$("#f-status").innerHTML = STATUSES.map(s => `<option value="${s.key}">${s.label}</option>`).join("");
+
+let editingId = null;
+
+function fillContactSelect(selectedId){
+  const sel = $("#f-contact");
+  sel.innerHTML = `<option value="">— 未指定 —</option>` +
+    state.contacts.map(c => `<option value="${c.id}">${esc(contactLabel(c))}</option>`).join("");
+  sel.value = selectedId && state.contacts.some(c => c.id === selectedId) ? selectedId : "";
+  updateContactPreview();
+}
+function updateContactPreview(){
+  const c = state.contacts.find(x => x.id === $("#f-contact").value);
+  const el = $("#contact-preview");
+  if(!c){ el.textContent = "電話與信箱跟著窗口資料走，改一次全部專案都會更新。"; return; }
+  const bits = [c.title, c.phone, c.email].filter(Boolean);
+  el.textContent = bits.length ? bits.join("　·　") : "這位窗口還沒填電話或信箱。";
+}
+$("#f-contact").addEventListener("change", updateContactPreview);
+
+function openProjectForm(id){
+  editingId = id || null;
+  const p = id ? state.projects.find(x => x.id === id) : null;
+  const f = $("#form-project");
+  $("#dlg-project-title").textContent = p ? "編輯專案" : "新增專案";
+  f.reset();
+  fillContactSelect(p ? p.contactId : "");
+  if(p){
+    f.elements.name.value = p.name || "";
+    f.elements.status.value = p.status || "doing";
+    f.elements.client.value = p.client || "";
+    f.elements.domain.value = p.domain || "";
+    f.elements.testUrl.value = p.testUrl || "";
+    f.elements.adminUrl.value = p.adminUrl || "";
+    f.elements.host.value = p.host || "";
+    f.elements.ftpHost.value = p.ftpHost || "";
+    f.elements.ftpUser.value = p.ftpUser || "";
+    f.elements.ftpNote.value = p.ftpNote || "";
+    f.elements.launchDate.value = p.launchDate || "";
+    f.elements.expiryDate.value = p.expiryDate || "";
+    f.elements.tags.value = (p.tags || []).join(", ");
+    f.elements.note.value = p.note || "";
+  }
+  $("#dlg-project").showModal();
+  setTimeout(() => f.elements.name.focus(), 40);
+}
+
+$("#form-project").addEventListener("submit", async e => {
+  const f = e.target;
+  if(!f.elements.name.value.trim()){ e.preventDefault(); return; }
+  const now = Date.now();
+  const base = editingId ? state.projects.find(p => p.id === editingId) : { id: uid(), createdAt: now };
+  const rec = {
+    ...base,
+    name: f.elements.name.value.trim(),
+    status: f.elements.status.value,
+    client: f.elements.client.value.trim(),
+    contactId: f.elements.contactId.value || "",
+    domain: f.elements.domain.value.trim(),
+    testUrl: f.elements.testUrl.value.trim(),
+    adminUrl: f.elements.adminUrl.value.trim(),
+    host: f.elements.host.value.trim(),
+    ftpHost: f.elements.ftpHost.value.trim(),
+    ftpUser: f.elements.ftpUser.value.trim(),
+    ftpNote: f.elements.ftpNote.value.trim(),
+    launchDate: f.elements.launchDate.value,
+    expiryDate: f.elements.expiryDate.value,
+    tags: f.elements.tags.value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    note: f.elements.note.value.trim(),
+    updatedAt: now,
+  };
+  if(rec.contactId){ delete rec.contact; delete rec.phone; delete rec.email; }
+  const wasNew = !editingId;
+  await dbPut("projects", rec);
+  await loadAll();
+  toast(editingId ? "專案已更新" : "專案已建立");
+  if(wasNew) openDetail(rec.id);
+  else if(state.currentId) openDetail(state.currentId);
+  else renderList();
+});
+
+$("#btn-new").addEventListener("click", () => openProjectForm(null));
+
+/* ═══════════ 詳細頁 ═══════════ */
+async function openDetail(id){
+  state.currentId = id;
+  const p = state.projects.find(x => x.id === id);
+  if(!p) return backToList();
+  $("#view-list").hidden = true;
+  const view = $("#view-detail");
+  view.hidden = false;
+  view.innerHTML = detailHTML(p);
+  bindDetail(p);
+  await renderTimeline(p.id);
+  view.querySelector("#btn-back").focus();
+  window.scrollTo({ top:0, behavior:"instant" });
+}
+
+function backToList(){
+  state.currentId = null;
+  state.draftImages = [];
+  $("#view-detail").hidden = true;
+  $("#view-list").hidden = false;
+  renderList();
+  $("#q").focus();
+}
+
+function fieldHTML(label, value, opts = {}){
+  let inner;
+  if(!value) inner = `<div class="field__value field__value--empty">—</div>`;
+  else if(opts.link) inner = `<div class="field__value field__value--mono"><a href="${esc(normUrl(value))}" target="_blank" rel="noopener">${esc(value)} ↗</a></div>`;
+  else if(opts.mail) inner = `<div class="field__value field__value--mono"><a href="mailto:${esc(value)}">${esc(value)}</a></div>`;
+  else if(opts.tel)  inner = `<div class="field__value field__value--mono"><a href="tel:${esc(value.replace(/\s/g,""))}">${esc(value)}</a></div>`;
+  else inner = `<div class="field__value ${opts.mono ? "field__value--mono" : ""}">${esc(value)}</div>`;
+  return `<div class="field"><div class="field__label">${esc(label)}</div>${inner}</div>`;
+}
+
+function detailHTML(p){
+  const st = statusOf(p.status);
+  const ct = contactOf(p);
+  const lv = expiryLevel(p.expiryDate, p.status);
+  const d  = daysUntil(p.expiryDate);
+  const warn = lv === "over"
+    ? `<p class="warnbar warnbar--over">維護已於 ${p.expiryDate} 到期，逾期 ${Math.abs(d)} 天。</p>`
+    : lv === "soon"
+    ? `<p class="warnbar warnbar--soon">維護將於 ${p.expiryDate} 到期，剩 ${d} 天。</p>`
+    : "";
+  const tags = (p.tags || []).length
+    ? `<span>${p.tags.map(t => `<span class="tag tag--self" style="margin-right:5px">${esc(t)}</span>`).join("")}</span>`
+    : "";
+
+  return `
+  <h2 class="sr-only" id="detail-title">${esc(p.name)} 專案詳細資料</h2>
+  <div class="detail__top">
+    <button class="btn btn--ghost btn--sm" id="btn-back" type="button">
+      <svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      回列表
+    </button>
+    <div class="detail__actions">
+      <button class="btn btn--sm" id="btn-edit" type="button">編輯資料</button>
+      <button class="btn btn--sm" id="btn-dup" type="button">複製此專案</button>
+      <button class="btn btn--sm btn--danger" id="btn-del" type="button">刪除專案</button>
+    </div>
+  </div>
+
+  <h3 class="detail__title">${esc(p.name)}</h3>
+  <div class="detail__meta">
+    <span class="badge ${st.cls}">${st.label}</span>
+    ${p.client ? `<span>${esc(p.client)}</span>` : ""}
+    ${tags}
+  </div>
+  ${warn}
+
+  <div class="tabs" role="tablist" aria-label="專案分頁">
+    <button class="tab" role="tab" id="tab-basic" aria-controls="panel-basic" aria-selected="${state.tab==="basic"}" type="button" data-tab="basic">基本資料</button>
+    <button class="tab" role="tab" id="tab-tech"  aria-controls="panel-tech"  aria-selected="${state.tab==="tech"}"  type="button" data-tab="tech">技術資訊</button>
+    <button class="tab" role="tab" id="tab-reqs"  aria-controls="panel-reqs"  aria-selected="${state.tab==="reqs"}"  type="button" data-tab="reqs">需求紀錄</button>
+  </div>
+
+  <div class="panel" id="panel-basic" role="tabpanel" aria-labelledby="tab-basic" tabindex="0" ${state.tab==="basic"?"":"hidden"}>
+    <div class="field-grid">
+      ${fieldHTML("業務", p.client)}
+      ${ct ? `
+        ${fieldHTML("聯絡窗口", ct.title ? `${ct.name}　${ct.title}` : ct.name)}
+        ${fieldHTML("所屬單位", ct.org)}
+        ${fieldHTML("聯絡電話", ct.phone, {tel:true})}
+        ${fieldHTML("聯絡信箱", ct.email, {mail:true})}` : `
+        <div class="field field--cta" style="grid-column:1/-1">
+          <div>
+            <div class="field__label">聯絡窗口</div>
+            <div class="field__value field__value--empty">尚未指定</div>
+          </div>
+          <button class="btn btn--sm" type="button" id="btn-assign-contact">指定窗口</button>
+        </div>`}
+      ${fieldHTML("上線日期", p.launchDate, {mono:true})}
+      ${fieldHTML("維護到期日", p.expiryDate, {mono:true})}
+    </div>
+    ${p.note ? `<div class="note-block">${esc(p.note)}</div>` : ""}
+  </div>
+
+  <div class="panel" id="panel-tech" role="tabpanel" aria-labelledby="tab-tech" tabindex="0" ${state.tab==="tech"?"":"hidden"}>
+    <div class="field-grid">
+      ${fieldHTML("正式網域", p.domain, {link:true})}
+      ${fieldHTML("測試站網址", p.testUrl, {link:true})}
+      ${fieldHTML("後台網址", p.adminUrl, {link:true})}
+      ${fieldHTML("主機商 / 主機", p.host, {mono:true})}
+      ${fieldHTML("FTP 位址", p.ftpHost, {mono:true})}
+      ${fieldHTML("FTP 帳號", p.ftpUser, {mono:true})}
+      ${fieldHTML("密碼存放位置", p.ftpNote)}
+    </div>
+  </div>
+
+  <div class="panel" id="panel-reqs" role="tabpanel" aria-labelledby="tab-reqs" tabindex="0" ${state.tab==="reqs"?"":"hidden"}>
+    <form class="reqform" id="form-req">
+      <div class="reqform__row">
+        <div style="flex:0 0 auto">
+          <label class="lbl" for="r-date">日期</label>
+          <input class="inp" id="r-date" type="date" value="${new Date().toISOString().slice(0,10)}">
+        </div>
+        <div style="flex:1 1 230px;min-width:190px">
+          <label class="lbl" for="r-source">來源</label>
+          <div class="picker">
+            <select class="inp" id="r-source">${sourceOptions(p.contactId)}</select>
+            <button class="btn" type="button" id="r-add-contact" title="新增聯絡窗口">＋</button>
+          </div>
+        </div>
+      </div>
+      <label class="lbl" for="r-content">需求內容</label>
+      <textarea class="ta" id="r-content" placeholder="老闆說首頁 banner 要換成新版⋯（可直接 Ctrl+V 貼上截圖，或把圖片拖進來）"></textarea>
+      <div class="thumbs" id="r-thumbs"></div>
+      <p class="reqform__hint">支援貼上、拖放，或 <button class="btn btn--sm btn--ghost" type="button" id="r-pick">選擇圖片</button></p>
+      <input type="file" id="r-file" accept="image/*" multiple class="sr-only" tabindex="-1">
+      <div class="dlg__foot" style="padding:12px 0 0;border:0">
+        <button class="btn" type="button" id="req-cancel" hidden>取消編輯</button>
+        <button class="btn btn--primary" type="submit" id="req-submit">新增需求</button>
+      </div>
+    </form>
+    <div class="tl-bar">
+      <label><input type="checkbox" id="req-only-open"> 只看未完成</label>
+      <span class="tl-summary" id="req-summary"></span>
+    </div>
+    <div id="timeline"></div>
+  </div>`;
+}
+
+function bindDetail(p){
+  $("#btn-back").addEventListener("click", backToList);
+  $("#btn-edit").addEventListener("click", () => openProjectForm(p.id));
+  const assign = $("#btn-assign-contact");
+  if(assign) assign.addEventListener("click", () => openProjectForm(p.id));
+  $("#btn-dup").addEventListener("click", () => duplicateProject(p));
+  $("#btn-del").addEventListener("click", () =>
+    openConfirm(`確定要刪除「${p.name}」嗎？這個專案底下的所有需求紀錄和圖片也會一併移除，且無法復原。`,
+      () => deleteProject(p.id)));
+
+  $$(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+  $(".tabs").addEventListener("keydown", e => {
+    const tabs = $$(".tab");
+    const i = tabs.indexOf(document.activeElement);
+    if(i < 0) return;
+    let n = null;
+    if(e.key === "ArrowRight") n = (i + 1) % tabs.length;
+    if(e.key === "ArrowLeft")  n = (i - 1 + tabs.length) % tabs.length;
+    if(n === null) return;
+    e.preventDefault();
+    tabs[n].focus(); switchTab(tabs[n].dataset.tab);
+  });
+
+  state.draftImages = [];
+  state.editingReqId = null;
+  renderDraftThumbs();
+  const ta = $("#r-content");
+  ta.addEventListener("paste", e => {
+    const files = [...(e.clipboardData?.items || [])]
+      .filter(i => i.kind === "file" && i.type.startsWith("image/"))
+      .map(i => i.getAsFile());
+    if(files.length){ e.preventDefault(); addDraftImages(files); }
+  });
+  ["dragover","dragenter"].forEach(ev => ta.addEventListener(ev, e => { e.preventDefault(); ta.classList.add("dropzone"); }));
+  ["dragleave","drop"].forEach(ev => ta.addEventListener(ev, () => ta.classList.remove("dropzone")));
+  ta.addEventListener("drop", e => {
+    e.preventDefault();
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
+    if(files.length) addDraftImages(files);
+  });
+  $("#r-pick").addEventListener("click", () => $("#r-file").click());
+  $("#r-file").addEventListener("change", e => { addDraftImages([...e.target.files]); e.target.value = ""; });
+  $("#form-req").addEventListener("submit", e => { e.preventDefault(); saveRequirement(p.id); });
+  $("#r-add-contact").addEventListener("click", () => openContactForm(null, "req"));
+  $("#req-cancel").addEventListener("click", () => resetReqForm());
+  $("#req-only-open").checked = state.reqOnlyOpen;
+  $("#req-only-open").addEventListener("change", e => {
+    state.reqOnlyOpen = e.target.checked;
+    renderTimeline(p.id);
+  });
+}
+
+function switchTab(key){
+  state.tab = key;
+  $$(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === key)));
+  ["basic","tech","reqs"].forEach(k => { $("#panel-" + k).hidden = (k !== key); });
+}
+
+/* ═══════════ 複製 / 刪除專案 ═══════════ */
+async function duplicateProject(p){
+  const now = Date.now();
+  const copy = { ...p, id: uid(), name: p.name + "（複本）", createdAt: now, updatedAt: now };
+  await dbPut("projects", copy);
+  await loadAll();
+  toast("已複製專案，需求紀錄未一併複製");
+  openDetail(copy.id);
+}
+
+async function deleteProject(id){
+  const reqs = await dbByIndex("reqs", "projectId", id);
+  for(const r of reqs){
+    for(const imgId of (r.images || [])) await dbDel("images", imgId);
+    await dbDel("reqs", r.id);
+  }
+  await dbDel("projects", id);
+  await loadAll();
+  toast("專案已刪除");
+  backToList();
+}
+
+/* ═══════════ 需求紀錄 ═══════════ */
+function addDraftImages(files){
+  files.forEach(f => state.draftImages.push({ id: uid(), blob: f, name: f.name || "貼上的圖片" }));
+  renderDraftThumbs();
+}
+function renderDraftThumbs(){
+  const box = $("#r-thumbs");
+  if(!box) return;
+  box.innerHTML = state.draftImages.map(im => `
+    <div class="thumb">
+      <img src="${objectUrl(im.id, im.blob)}" alt="${esc(im.name)}">
+      <button class="thumb__x" type="button" data-drop="${im.id}" aria-label="移除 ${esc(im.name)}">✕</button>
+    </div>`).join("");
+  $$("[data-drop]", box).forEach(b => b.addEventListener("click", () => {
+    state.draftImages = state.draftImages.filter(x => x.id !== b.dataset.drop);
+    renderDraftThumbs();
+  }));
+}
+
+function resetReqForm(){
+  state.editingReqId = null;
+  state.draftImages = [];
+  if($("#r-content")) $("#r-content").value = "";
+  if($("#r-date")) $("#r-date").value = new Date().toISOString().slice(0,10);
+  if($("#r-source")) $("#r-source").value = defaultSourceId();
+  if($("#req-submit")) $("#req-submit").textContent = "新增需求";
+  if($("#req-cancel")) $("#req-cancel").hidden = true;
+  renderDraftThumbs();
+}
+
+async function startEditReq(id){
+  const r = state.reqs.find(x => x.id === id);
+  if(!r) return;
+  state.editingReqId = id;
+  $("#r-date").value = r.date;
+  $("#r-source").value = r.sourceContactId || "";
+  $("#r-content").value = r.content || "";
+  state.draftImages = [];
+  for(const imgId of (r.images || [])){
+    const rec = await dbGet("images", imgId);
+    if(rec) state.draftImages.push({ id: rec.id, blob: rec.blob, name: rec.name });
+  }
+  renderDraftThumbs();
+  $("#req-submit").textContent = "更新需求";
+  $("#req-cancel").hidden = false;
+  $("#r-content").focus();
+  $("#r-content").scrollIntoView({ block:"center" });
+}
+
+async function saveRequirement(projectId){
+  const content = $("#r-content").value.trim();
+  if(!content && !state.draftImages.length){ toast("請輸入內容或加入圖片"); $("#r-content").focus(); return; }
+
+  const imageIds = [];
+  for(const im of state.draftImages){
+    await dbPut("images", { id: im.id, blob: im.blob, name: im.name, type: im.blob.type });
+    imageIds.push(im.id);
+  }
+
+  const srcId = $("#r-source").value;
+  const srcName = srcId ? (state.contacts.find(c => c.id === srcId)?.name || "") : "";
+
+  if(state.editingReqId){
+    const r = state.reqs.find(x => x.id === state.editingReqId);
+    for(const old of (r.images || [])) if(!imageIds.includes(old)) await dbDel("images", old);
+    await dbPut("reqs", {
+      ...r,
+      date: $("#r-date").value || r.date,
+      sourceContactId: srcId, sourceName: srcName,
+      content, images: imageIds, updatedAt: Date.now(),
+    });
+    toast("需求已更新");
+  } else {
+    await dbPut("reqs", {
+      id: uid(), projectId,
+      date: $("#r-date").value || new Date().toISOString().slice(0,10),
+      sourceContactId: srcId, sourceName: srcName,
+      content, images: imageIds, done: false, createdAt: Date.now(),
+    });
+    toast("需求已新增");
+  }
+
+  const p = state.projects.find(x => x.id === projectId);
+  if(p){ p.updatedAt = Date.now(); await dbPut("projects", p); }
+  resetReqForm();
+  await loadAll();
+  await renderTimeline(projectId);
+}
+
+async function renderTimeline(projectId){
+  const box = $("#timeline");
+  if(!box) return;
+  const all = state.reqs.filter(r => r.projectId === projectId)
+    .sort((a,b) => (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt);
+  const open = all.filter(r => !r.done).length;
+  const summary = $("#req-summary");
+  if(summary) summary.textContent = all.length ? `未完成 ${open} ／ 共 ${all.length}` : "";
+  const list = state.reqOnlyOpen ? all.filter(r => !r.done) : all;
+
+  if(!all.length){
+    box.innerHTML = `<div class="empty" style="padding:36px 20px">
+      <p class="empty__title">還沒有需求紀錄</p>
+      <p class="empty__body">老闆或客戶傳來的修改需求記在這裡，附上截圖就不會忘記細節。</p></div>`;
+    return;
+  }
+  if(!list.length){
+    box.innerHTML = `<div class="empty" style="padding:36px 20px">
+      <p class="empty__title">全部都完成了</p>
+      <p class="empty__body">取消勾選「只看未完成」就能看到歷史紀錄。</p></div>`;
+    return;
+  }
+
+  const parts = [];
+  for(const r of list){
+    const src = reqSource(r);
+    let thumbs = "";
+    for(const imgId of (r.images || [])){
+      const rec = await dbGet("images", imgId);
+      if(!rec) continue;
+      thumbs += `<button class="thumb thumb--btn" type="button" data-img="${imgId}" aria-label="放大檢視 ${esc(rec.name)}">
+        <img src="${objectUrl(imgId, rec.blob)}" alt="${esc(rec.name)}"></button>`;
+    }
+    parts.push(`
+      <div class="tl-item ${r.done ? "tl-item--done" : ""}">
+        <div class="tl-head">
+          <span class="tl-date">${esc(r.date)}</span>
+          <span class="tag ${src.cls}">${esc(src.label)}</span>
+          <span class="tl-tools">
+            <button class="btn btn--sm btn--ghost" type="button" data-editreq="${r.id}">編輯</button>
+            <button class="btn btn--sm btn--ghost" type="button" data-toggle="${r.id}">${r.done ? "改回未完成" : "標記完成"}</button>
+            <button class="btn btn--sm btn--ghost" type="button" data-delreq="${r.id}" aria-label="刪除這筆需求">刪除</button>
+          </span>
+        </div>
+        ${r.content ? `<div class="tl-body">${esc(r.content)}</div>` : ""}
+        ${thumbs ? `<div class="thumbs">${thumbs}</div>` : ""}
+      </div>`);
+  }
+  box.innerHTML = `<div class="timeline">${parts.join("")}</div>`;
+
+  $$("[data-editreq]", box).forEach(b => b.addEventListener("click", () => startEditReq(b.dataset.editreq)));
+  $$("[data-toggle]", box).forEach(b => b.addEventListener("click", async () => {
+    const r = state.reqs.find(x => x.id === b.dataset.toggle);
+    r.done = !r.done;
+    await dbPut("reqs", r);
+    await loadAll();
+    await renderTimeline(projectId);
+  }));
+  $$("[data-delreq]", box).forEach(b => b.addEventListener("click", () => {
+    openConfirm("確定要刪除這筆需求紀錄嗎？附加的圖片也會一起移除。", async () => {
+      const r = state.reqs.find(x => x.id === b.dataset.delreq);
+      for(const imgId of (r.images || [])) await dbDel("images", imgId);
+      await dbDel("reqs", r.id);
+      if(state.editingReqId === r.id) resetReqForm();
+      await loadAll();
+      await renderTimeline(projectId);
+      toast("需求已刪除");
+    });
+  }));
+  $$("[data-img]", box).forEach(b => b.addEventListener("click", async () => {
+    const rec = await dbGet("images", b.dataset.img);
+    if(!rec) return;
+    $("#dlg-image-img").src = objectUrl(rec.id, rec.blob);
+    $("#dlg-image-img").alt = rec.name || "需求附圖";
+    $("#dlg-image-title").textContent = rec.name || "需求附圖";
+    $("#dlg-image").showModal();
+  }));
+}
+
+/* ═══════════ 聯絡窗口 ═══════════ */
+let editingContactId = null;
+let contactReturnTarget = null;
+
+function renderContacts(){
+  const body = $("#contacts-body");
+  if(!state.contacts.length){
+    body.innerHTML = `<div class="empty" style="padding:32px 12px">
+      <p class="empty__title">還沒有聯絡窗口</p>
+      <p class="empty__body">先把常合作的窗口建起來，之後在專案裡直接選就好，電話信箱不用再重打一次。</p></div>`;
+    return;
+  }
+  body.innerHTML = `<div class="clist">${state.contacts.map(c => {
+    const used = contactUseCount(c.id);
+    const meta = [c.phone, c.email].filter(Boolean).join("　·　");
+    return `<div class="crow">
+      <div class="crow__main">
+        <div><span class="crow__name">${esc(c.name)}</span>${c.title ? ` <span class="crow__org">${esc(c.title)}</span>` : ""}</div>
+        ${c.org ? `<div class="crow__org">${esc(c.org)}</div>` : ""}
+        ${meta ? `<div class="crow__meta">${esc(meta)}</div>` : ""}
+      </div>
+      <span class="crow__used">${used} 個專案</span>
+      <span class="crow__tools">
+        <button class="btn btn--sm btn--ghost" type="button" data-cedit="${c.id}">編輯</button>
+        <button class="btn btn--sm btn--ghost" type="button" data-cdel="${c.id}" aria-label="刪除 ${esc(c.name)}">刪除</button>
+      </span>
+    </div>`;
+  }).join("")}</div>`;
+
+  $$("[data-cedit]", body).forEach(b => b.addEventListener("click", () => openContactForm(b.dataset.cedit, null)));
+  $$("[data-cdel]", body).forEach(b => b.addEventListener("click", () => {
+    const c = state.contacts.find(x => x.id === b.dataset.cdel);
+    const used = contactUseCount(c.id);
+    const cited = state.reqs.filter(r => r.sourceContactId === c.id).length;
+    const parts = [];
+    if(used)  parts.push(`${used} 個專案的聯絡窗口會變成未指定`);
+    if(cited) parts.push(`${cited} 筆需求紀錄會標示為「${c.name}（已移除）」`);
+    const msg = parts.length
+      ? `刪除「${c.name}」之後，${parts.join("，")}。此動作無法復原，要繼續嗎？`
+      : `確定要刪除「${c.name}」嗎？此動作無法復原。`;
+    openConfirm(msg, async () => {
+      for(const p of state.projects.filter(p => p.contactId === c.id)){
+        p.contactId = ""; p.updatedAt = Date.now();
+        await dbPut("projects", p);
+      }
+      await dbDel("contacts", c.id);
+      await loadAll();
+      renderContacts();
+      if(state.currentId) openDetail(state.currentId); else renderList();
+      toast("窗口已刪除");
+    });
+  }));
+}
+
+function openContactForm(id, target){
+  editingContactId = id || null;
+  contactReturnTarget = target || null;
+  const c = id ? state.contacts.find(x => x.id === id) : null;
+  const f = $("#form-contact");
+  $("#dlg-contact-title").textContent = c ? "編輯窗口" : "新增窗口";
+  f.reset();
+  if(c){
+    f.elements.name.value = c.name || "";
+    f.elements.org.value = c.org || "";
+    f.elements.title.value = c.title || "";
+    f.elements.phone.value = c.phone || "";
+    f.elements.email.value = c.email || "";
+    f.elements.note.value = c.note || "";
+  }
+  $("#dlg-contact").showModal();
+  setTimeout(() => f.elements.name.focus(), 40);
+}
+
+$("#form-contact").addEventListener("submit", async e => {
+  const f = e.target;
+  if(!f.elements.name.value.trim()){ e.preventDefault(); return; }
+  const now = Date.now();
+  const base = editingContactId ? state.contacts.find(c => c.id === editingContactId) : { id: uid(), createdAt: now };
+  const rec = {
+    ...base,
+    name: f.elements.name.value.trim(),
+    org: f.elements.org.value.trim(),
+    title: f.elements.title.value.trim(),
+    phone: f.elements.phone.value.trim(),
+    email: f.elements.email.value.trim(),
+    note: f.elements.note.value.trim(),
+    updatedAt: now,
+  };
+  await dbPut("contacts", rec);
+  await loadAll();
+  toast(editingContactId ? "窗口已更新" : "窗口已建立");
+
+  if(contactReturnTarget === "project" && $("#dlg-project").open){
+    fillContactSelect(rec.id);
+  } else if(contactReturnTarget === "req" && $("#r-source")){
+    $("#r-source").innerHTML = sourceOptions(rec.id);
+    $("#r-source").value = rec.id;
+  } else {
+    if($("#dlg-contacts").open) renderContacts();
+    if(state.currentId) openDetail(state.currentId); else renderList();
+  }
+});
+
+$("#btn-contacts").addEventListener("click", () => { renderContacts(); $("#dlg-contacts").showModal(); });
+$("#btn-new-contact").addEventListener("click", () => openContactForm(null, null));
+$("#btn-add-contact").addEventListener("click", () => openContactForm(null, "project"));
+
+/* ═══════════ Markdown ═══════════ */
+const MD_FIELD = {
+  "狀態":"status", "業務":"client", "客戶":"client", "窗口":"__contact", "聯絡窗口":"__contact",
+  "網域":"domain", "正式網域":"domain", "測試站":"testUrl", "測試站網址":"testUrl",
+  "後台":"adminUrl", "後台網址":"adminUrl", "主機":"host", "主機商":"host",
+  "FTP":"ftpHost", "FTP位址":"ftpHost", "FTP帳號":"ftpUser",
+  "密碼位置":"ftpNote", "密碼存放位置":"ftpNote",
+  "上線日":"launchDate", "上線日期":"launchDate",
+  "到期日":"expiryDate", "維護到期日":"expiryDate",
+  "標籤":"tags", "備註":"note",
+};
+const MD_CONTACT = { "姓名":"name", "單位":"org", "所屬單位":"org", "職稱":"title", "電話":"phone", "信箱":"email", "備註":"note" };
+const MD_PROJECT_COL = Object.assign({ "專案名稱":"name", "名稱":"name" }, MD_FIELD);
+
+function statusKeyByLabel(v){
+  const t = String(v || "").trim();
+  const s = STATUSES.find(x => x.label === t || x.key === t);
+  return s ? s.key : "doing";
+}
+
+function toMarkdown(){
+  const L = [];
+  if(state.contacts.length){
+    L.push("# 聯絡窗口", "");
+    L.push("| 姓名 | 所屬單位 | 職稱 | 電話 | 信箱 | 備註 |");
+    L.push("|---|---|---|---|---|---|");
+    state.contacts.forEach(c => L.push(
+      `| ${c.name} | ${c.org||""} | ${c.title||""} | ${c.phone||""} | ${c.email||""} | ${(c.note||"").replace(/\n/g," ")} |`));
+    L.push("");
+  }
+  L.push("# 專案", "");
+  state.projects.forEach(p => {
+    const ct = contactOf(p);
+    L.push(`## ${p.name}`);
+    const row = (k, v) => { if(v) L.push(`- ${k}: ${v}`); };
+    row("狀態", statusOf(p.status).label);
+    row("業務", p.client);
+    row("窗口", ct && ct.name);
+    row("網域", p.domain);
+    row("測試站", p.testUrl);
+    row("後台", p.adminUrl);
+    row("主機", p.host);
+    row("FTP位址", p.ftpHost);
+    row("FTP帳號", p.ftpUser);
+    row("密碼位置", p.ftpNote);
+    row("上線日", p.launchDate);
+    row("到期日", p.expiryDate);
+    row("標籤", (p.tags || []).join(", "));
+    row("備註", (p.note || "").replace(/\n/g, " "));
+    const rs = state.reqs.filter(r => r.projectId === p.id)
+      .sort((a,b) => (a.date||"").localeCompare(b.date||""));
+    if(rs.length){
+      L.push("", "### 需求");
+      rs.forEach(r => {
+        const c = r.sourceContactId ? state.contacts.find(x => x.id === r.sourceContactId) : null;
+        const who = r.sourceContactId ? ` @${(c ? c.name : r.sourceName || "").replace(/\s/g,"")}` : "";
+        const imgs = (r.images || []).length ? `（附圖 ${r.images.length} 張，需用 JSON 備份）` : "";
+        L.push(`- [${r.done ? "x" : " "}] ${r.date}${who} ${(r.content||"").replace(/\n/g," ")}${imgs}`);
+      });
+    }
+    L.push("");
+  });
+  return L.join("\n").trim() + "\n";
+}
+
+function readTable(lines, i){
+  const cells = s => s.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(x => x.trim());
+  const headers = cells(lines[i]).map(h => h.replace(/\s+/g, ""));
+  let j = i + 1;
+  if(j < lines.length && /^\|?[\s:|-]+$/.test(lines[j].trim().replace(/\|/g, "|"))) j++;
+  const rows = [];
+  while(j < lines.length && lines[j].trim().startsWith("|")){ rows.push(cells(lines[j])); j++; }
+  return { headers, rows, next: j };
+}
+
+function parseMarkdown(text){
+  const lines = String(text).replace(/\r/g, "").split("\n");
+  const out = { contacts: [], projects: [] };
+  let section = "projects", cur = null, inReq = false;
+
+  for(let i = 0; i < lines.length; i++){
+    const line = lines[i].trim();
+    if(!line) continue;
+
+    if(/^#\s/.test(line)){
+      section = /窗口|聯絡人/.test(line) ? "contacts" : "projects";
+      cur = null; inReq = false; continue;
+    }
+    if(/^###\s/.test(line)){ inReq = true; continue; }
+    if(/^##\s/.test(line)){
+      cur = { name: line.replace(/^##\s*/, "").trim(), fields: {}, reqs: [] };
+      out.projects.push(cur); inReq = false; continue;
+    }
+    if(line.startsWith("|")){
+      const { headers, rows, next } = readTable(lines, i);
+      i = next - 1;
+      if(section === "contacts"){
+        rows.forEach(r => {
+          const o = {};
+          headers.forEach((h, k) => { const f = MD_CONTACT[h]; if(f) o[f] = r[k] || ""; });
+          if(o.name) out.contacts.push(o);
+        });
+      } else {
+        rows.forEach(r => {
+          const o = { name: "", fields: {}, reqs: [] };
+          headers.forEach((h, k) => {
+            const f = MD_PROJECT_COL[h];
+            if(!f) return;
+            if(f === "name") o.name = r[k] || "";
+            else if(r[k]) o.fields[f] = r[k];
+          });
+          if(o.name) out.projects.push(o);
+        });
+      }
+      continue;
+    }
+    if(!/^[-*]\s/.test(line)) continue;
+    const body = line.replace(/^[-*]\s*/, "");
+
+    if(inReq && cur){
+      const done = /^\[[xX]\]/.test(body);
+      let rest = body.replace(/^\[[\sxX]?\]\s*/, "");
+      let date = "";
+      const dm = rest.match(/^(\d{4}-\d{1,2}-\d{1,2})\s*/);
+      if(dm){ date = dm[1]; rest = rest.slice(dm[0].length); }
+      let who = "";
+      const wm = rest.match(/^@(\S+)\s*/);
+      if(wm){ who = wm[1]; rest = rest.slice(wm[0].length); }
+      if(rest.trim()) cur.reqs.push({ done, date, who, content: rest.trim() });
+      continue;
+    }
+    if(cur){
+      const m = body.match(/^([^:：]+)[:：]\s*(.*)$/);
+      if(!m) continue;
+      const f = MD_FIELD[m[1].trim().replace(/\s+/g, "")];
+      if(f) cur.fields[f] = m[2].trim();
+    }
+  }
+  return out;
+}
+
+async function importMarkdown(text){
+  const parsed = parseMarkdown(text);
+  if(!parsed.contacts.length && !parsed.projects.length)
+    return { error: "沒有解析到任何專案或窗口，請確認格式" };
+
+  const now = Date.now();
+  const r = { cNew:0, cUpd:0, pNew:0, pUpd:0, rNew:0 };
+
+  for(const c of parsed.contacts){
+    const ex = state.contacts.find(x => x.name === c.name);
+    if(ex){ await dbPut("contacts", { ...ex, ...c, updatedAt: now }); r.cUpd++; }
+    else {
+      await dbPut("contacts", { id: uid(), name: c.name, org: c.org||"", title: c.title||"",
+        phone: c.phone||"", email: c.email||"", note: c.note||"", createdAt: now, updatedAt: now });
+      r.cNew++;
+    }
+  }
+  await loadAll();
+
+  for(const p of parsed.projects){
+    const patch = {};
+    for(const [k, v] of Object.entries(p.fields || {})){
+      if(k === "__contact"){
+        const c = state.contacts.find(x => x.name === String(v).trim());
+        if(c) patch.contactId = c.id;
+      }
+      else if(k === "status") patch.status = statusKeyByLabel(v);
+      else if(k === "tags") patch.tags = String(v).split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      else patch[k] = v;
+    }
+    const ex = state.projects.find(x => x.name === p.name);
+    let rec;
+    if(ex){ rec = { ...ex, ...patch, updatedAt: now }; r.pUpd++; }
+    else {
+      rec = { id: uid(), name: p.name, status: "doing", client: "", contactId: "",
+        domain: "", testUrl: "", adminUrl: "", host: "", ftpHost: "", ftpUser: "", ftpNote: "",
+        launchDate: "", expiryDate: "", tags: [], note: "", createdAt: now, updatedAt: now, ...patch };
+      r.pNew++;
+    }
+    await dbPut("projects", rec);
+
+    for(const q of (p.reqs || [])){
+      if(state.reqs.some(x => x.projectId === rec.id && x.date === q.date && x.content === q.content)) continue;
+      const c = q.who ? state.contacts.find(x => x.name === q.who) : null;
+      await dbPut("reqs", {
+        id: uid(), projectId: rec.id,
+        date: q.date || new Date().toISOString().slice(0,10),
+        sourceContactId: c ? c.id : "", sourceName: c ? c.name : "",
+        content: q.content, images: [], done: !!q.done, createdAt: now,
+      });
+      r.rNew++;
+    }
+    await loadAll();
+  }
+  return r;
+}
+
+$("#btn-md").addEventListener("click", () => {
+  $("#md-status").textContent = "";
+  $("#md-text").value = "";
+  $("#dlg-md").showModal();
+});
+$("#md-fill").addEventListener("click", () => {
+  $("#md-text").value = toMarkdown();
+  $("#md-status").textContent = `已帶入 ${state.projects.length} 個專案、${state.contacts.length} 位窗口`;
+});
+$("#md-copy").addEventListener("click", async () => {
+  const t = $("#md-text").value;
+  if(!t.trim()){ $("#md-status").textContent = "內容是空的"; return; }
+  try { await navigator.clipboard.writeText(t); $("#md-status").textContent = "已複製到剪貼簿"; }
+  catch { $("#md-text").select(); $("#md-status").textContent = "請按 Ctrl+C 複製"; }
+});
+$("#md-download").addEventListener("click", () => {
+  const t = $("#md-text").value || toMarkdown();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([t], { type: "text/markdown" }));
+  a.download = `project-desk-${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+});
+$("#md-import").addEventListener("click", async () => {
+  const t = $("#md-text").value;
+  if(!t.trim()){ $("#md-status").textContent = "請先貼上內容"; return; }
+  $("#md-status").textContent = "解析中⋯";
+  const r = await importMarkdown(t);
+  if(r.error){ $("#md-status").textContent = r.error; return; }
+  const parts = [];
+  if(r.pNew) parts.push(`新增 ${r.pNew} 個專案`);
+  if(r.pUpd) parts.push(`更新 ${r.pUpd} 個專案`);
+  if(r.cNew) parts.push(`新增 ${r.cNew} 位窗口`);
+  if(r.cUpd) parts.push(`更新 ${r.cUpd} 位窗口`);
+  if(r.rNew) parts.push(`新增 ${r.rNew} 筆需求`);
+  $("#md-status").textContent = parts.length ? parts.join("、") : "沒有變更（內容與現有資料相同）";
+  toast(parts.length ? "Markdown 匯入完成" : "沒有需要更新的資料");
+  if(state.currentId) openDetail(state.currentId); else renderList();
+});
+
+/* ═══════════ 匯出 / 匯入 ═══════════ */
+function blobToDataUrl(blob){
+  return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+}
+async function dataUrlToBlob(url){ return (await fetch(url)).blob(); }
+
+$("#btn-export").addEventListener("click", async () => {
+  const images = await dbAll("images");
+  const packed = [];
+  for(const im of images) packed.push({ id: im.id, name: im.name, type: im.type, data: await blobToDataUrl(im.blob) });
+  const payload = {
+    app: "project-desk", version: 2, exportedAt: new Date().toISOString(),
+    projects: state.projects, reqs: state.reqs, contacts: state.contacts, images: packed,
+  };
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `project-desk-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(`已匯出 ${state.projects.length} 個專案`);
+});
+
+$("#btn-import").addEventListener("click", () => $("#file-import").click());
+$("#file-import").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); }
+  catch { toast("這個檔案讀不了，請確認是 Project Desk 匯出的 JSON"); return; }
+  if(data.app !== "project-desk" || !Array.isArray(data.projects)){
+    toast("檔案格式不符，請選擇 Project Desk 匯出的備份"); return;
+  }
+  openConfirm(`即將匯入 ${data.projects.length} 個專案，並覆蓋目前全部資料。建議先匯出一份現有備份。要繼續嗎？`, async () => {
+    await dbClear("projects"); await dbClear("reqs"); await dbClear("images"); await dbClear("contacts");
+    for(const p of data.projects) await dbPut("projects", p);
+    for(const c of (data.contacts || [])) await dbPut("contacts", c);
+    for(const r of (data.reqs || [])) await dbPut("reqs", r);
+    for(const im of (data.images || []))
+      await dbPut("images", { id: im.id, name: im.name, type: im.type, blob: await dataUrlToBlob(im.data) });
+    urlCache.forEach(u => URL.revokeObjectURL(u));
+    urlCache.clear();
+    await loadAll();
+    backToList();
+    toast(`已匯入 ${data.projects.length} 個專案`);
+  });
+});
+
+/* ═══════════ 啟動 ═══════════ */
+(async function init(){
+  try {
+    await openDB();
+    await loadAll();
+    renderList();
+  } catch(err) {
+    $("#list-sheet").innerHTML = `<div class="empty">
+      <p class="empty__title">瀏覽器儲存空間打不開</p>
+      <p class="empty__body">這個工具用 IndexedDB 存資料。無痕視窗或封鎖網站資料的設定會讓它無法運作，請在一般視窗開啟。</p></div>`;
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
