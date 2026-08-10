@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Project Desk 不做登入驗證，知道網址即可讀寫，所以整庫對所有人開放。
+// 到 Firebase Console → Firestore Database → 規則，貼上整段取代預設內容。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

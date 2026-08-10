@@ -597,6 +597,8 @@ dialog::backdrop{background:rgba(16,20,26,.5)}
   <div class="dlg__body" id="dlg-file-body" style="padding:0"></div>
 </dialog>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
 "use strict";
 
@@ -614,38 +616,88 @@ const LEGACY_SOURCES = [
   { key:"self",   label:"我自己", cls:"tag--self" },
 ];
 const SOON_DAYS = 30;
-const DB_NAME = "project_desk";
-const DB_VER  = 3;
 
-/* ═══════════ IndexedDB ═══════════ */
-let db;
-function openDB(){
-  return new Promise((resolve, reject) => {
-    const r = indexedDB.open(DB_NAME, DB_VER);
-    r.onupgradeneeded = e => {
-      const d = e.target.result;
-      if(!d.objectStoreNames.contains("projects")) d.createObjectStore("projects",{keyPath:"id"});
-      if(!d.objectStoreNames.contains("reqs")){
-        const s = d.createObjectStore("reqs",{keyPath:"id"});
-        s.createIndex("projectId","projectId",{unique:false});
-      }
-      if(!d.objectStoreNames.contains("images")) d.createObjectStore("images",{keyPath:"id"});
-      if(!d.objectStoreNames.contains("files")) d.createObjectStore("files",{keyPath:"id"});
-      if(!d.objectStoreNames.contains("contacts")) d.createObjectStore("contacts",{keyPath:"id"});
-    };
-    r.onsuccess = e => { db = e.target.result; resolve(db); };
-    r.onerror   = () => reject(r.error);
-  });
+/* ═══════════ Firebase（雲端同步資料庫） ═══════════ */
+/* 建立 Firebase 專案後，把 Console 給的設定值整包貼進來，設定步驟見 README。 */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD97LLKIE4yoZPpTcu7tM6TEQcV3TcGfhc",
+  authDomain: "tool-project-f3bb0.firebaseapp.com",
+  projectId: "tool-project-f3bb0",
+};
+const FIREBASE_READY = !FIREBASE_CONFIG.apiKey.includes("YOUR-API-KEY");
+if(FIREBASE_READY) firebase.initializeApp(FIREBASE_CONFIG);
+const fdb = FIREBASE_READY ? firebase.firestore() : null;
+
+/* 圖片／檔案不用額外的雲端儲存空間（避免要求信用卡），直接把內容轉成 base64 存進 Firestore 文件。
+   Firestore 單一文件上限 1MB，base64 會把體積脹大約 1/3，所以原始檔案大小上限抓 700KB（見 MAX_ATTACHMENT_BYTES）。 */
+async function dbAllBlobMeta(name){
+  const snap = await fdb.collection(name).get();
+  return snap.docs.map(d => ({ id: d.id, name: d.data().name, type: d.data().type }));
 }
-const store = (name, mode="readonly") => db.transaction(name, mode).objectStore(name);
-const wrap  = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function dbGetBlob(name, id){
+  const doc = await fdb.collection(name).doc(id).get();
+  if(!doc.exists) return undefined;
+  const meta = doc.data();
+  const blob = await dataUrlToBlob(meta.data);
+  return { id, name: meta.name, type: meta.type, blob };
+}
+async function dbPutBlob(name, val){
+  const type = val.type || (val.blob && val.blob.type) || "application/octet-stream";
+  const dataUrl = await blobToDataUrl(val.blob);
+  await fdb.collection(name).doc(val.id).set({ name: val.name, type, data: dataUrl });
+  return val;
+}
+async function dbDelBlob(name, id){
+  await fdb.collection(name).doc(id).delete();
+}
 
-const dbAll    = name        => wrap(store(name).getAll());
-const dbGet    = (name, id)  => wrap(store(name).get(id));
-const dbPut    = (name, val) => wrap(store(name,"readwrite").put(val));
-const dbDel    = (name, id)  => wrap(store(name,"readwrite").delete(id));
-const dbClear   = name       => wrap(store(name,"readwrite").clear());
-const dbByIndex = (name, idx, val) => wrap(store(name).index(idx).getAll(val));
+async function dbAll(name){
+  if(name === "images" || name === "files") return dbAllBlobMeta(name);
+  const snap = await fdb.collection(name).get();
+  return snap.docs.map(d => d.data());
+}
+async function dbGet(name, id){
+  if(name === "images" || name === "files") return dbGetBlob(name, id);
+  const doc = await fdb.collection(name).doc(id).get();
+  return doc.exists ? doc.data() : undefined;
+}
+async function dbPut(name, val){
+  if(name === "images" || name === "files") return dbPutBlob(name, val);
+  await fdb.collection(name).doc(val.id).set(val);
+  return val;
+}
+async function dbDel(name, id){
+  if(name === "images" || name === "files") return dbDelBlob(name, id);
+  await fdb.collection(name).doc(id).delete();
+}
+async function dbClear(name){
+  const snap = await fdb.collection(name).get();
+  const batch = fdb.batch();
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+}
+async function dbByIndex(name, idx, val){
+  const all = await dbAll(name);
+  return all.filter(r => r[idx] === val);
+}
+
+/* 其他分頁／裝置改了資料時，重新載入並刷新畫面，但避開正在編輯中的表單 */
+function subscribeRealtime(){
+  let t = null;
+  const trigger = () => { clearTimeout(t); t = setTimeout(syncRefresh, 500); };
+  ["projects", "reqs", "contacts"].forEach(col => fdb.collection(col).onSnapshot(trigger));
+}
+async function syncRefresh(){
+  if($$("dialog").some(d => d.open)) return;
+  await loadAll();
+  if(state.currentId){
+    const composing = ($("#r-content") && $("#r-content").value.trim()) || state.draftImages.length || state.draftFiles.length;
+    if(!composing) openDetail(state.currentId);
+    else await renderTimeline(state.currentId);
+  } else {
+    renderList();
+  }
+}
 
 /* ═══════════ 狀態 ═══════════ */
 const state = {
@@ -1145,6 +1197,7 @@ function detailHTML(p){
       <p class="reqform__hint">支援貼上、拖放，或
         <button class="btn btn--sm btn--ghost" type="button" id="r-pick">選擇圖片</button>
         <button class="btn btn--sm btn--ghost" type="button" id="r-pick-file">選擇檔案</button>
+        （單一檔案上限 700KB）
       </p>
       <input type="file" id="r-file" accept="image/*" multiple class="sr-only" tabindex="-1">
       <input type="file" id="r-filedoc" multiple class="sr-only" tabindex="-1">
@@ -1250,9 +1303,20 @@ async function deleteProject(id){
 }
 
 /* ═══════════ 需求紀錄 ═══════════ */
+const MAX_ATTACHMENT_BYTES = 700 * 1024;
+function splitBySize(files){
+  const ok = [], big = [];
+  files.forEach(f => (f.size > MAX_ATTACHMENT_BYTES ? big : ok).push(f));
+  return { ok, big };
+}
+function warnOversized(big){
+  if(big.length) toast(`${big.map(f => f.name).join("、")} 超過 700KB，無法上傳`);
+}
 function addDraftImages(files){
-  files.forEach(f => state.draftImages.push({ id: uid(), blob: f, name: f.name || "貼上的圖片" }));
+  const { ok, big } = splitBySize(files);
+  ok.forEach(f => state.draftImages.push({ id: uid(), blob: f, name: f.name || "貼上的圖片" }));
   renderDraftThumbs();
+  warnOversized(big);
 }
 function renderDraftThumbs(){
   const box = $("#r-thumbs");
@@ -1273,8 +1337,10 @@ function renderDraftThumbs(){
 }
 
 function addDraftFiles(files){
-  files.forEach(f => state.draftFiles.push({ id: uid(), blob: f, name: f.name || "檔案" }));
+  const { ok, big } = splitBySize(files);
+  ok.forEach(f => state.draftFiles.push({ id: uid(), blob: f, name: f.name || "檔案" }));
   renderDraftFiles();
+  warnOversized(big);
 }
 function renderDraftFiles(){
   const box = $("#r-filelist");
@@ -1872,14 +1938,20 @@ $("#file-import").addEventListener("change", async e => {
 
 /* ═══════════ 啟動 ═══════════ */
 (async function init(){
+  if(!FIREBASE_READY){
+    $("#list-sheet").innerHTML = `<div class="empty">
+      <p class="empty__title">尚未設定雲端資料庫</p>
+      <p class="empty__body">請先建立 Firebase 專案，並把程式碼中的 FIREBASE_CONFIG 換成你專案的設定值，步驟見 README。</p></div>`;
+    return;
+  }
   try {
-    await openDB();
     await loadAll();
     renderList();
+    subscribeRealtime();
   } catch(err) {
     $("#list-sheet").innerHTML = `<div class="empty">
-      <p class="empty__title">瀏覽器儲存空間打不開</p>
-      <p class="empty__body">這個工具用 IndexedDB 存資料。無痕視窗或封鎖網站資料的設定會讓它無法運作，請在一般視窗開啟。</p></div>`;
+      <p class="empty__title">無法連線到雲端資料庫</p>
+      <p class="empty__body">請確認網路連線，以及 Firebase 專案設定與 Firestore／Storage 權限規則是否正確。</p></div>`;
     console.error(err);
   }
 })();
