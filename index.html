@@ -89,41 +89,46 @@ button,input,select,textarea{font:inherit; color:inherit}
 
 .resultbar{font-size:15px;color:var(--muted);font-family:var(--mono)}
 
-/* ---------- 列表 ---------- */
+/* ---------- 列表：卡片 ---------- */
 .sheet{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden}
-.tbl{width:100%;border-collapse:collapse;font-size:16px}
-.tbl caption{text-align:left;padding:0;position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.tbl th{
-  text-align:left;font-weight:500;font-size:13.5px;letter-spacing:.04em;
-  color:var(--muted);text-transform:uppercase;
-  padding:13px 16px;border-bottom:1px solid var(--line);background:var(--surface-2);
-}
-.tbl td{padding:15px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
-.tbl tbody tr:last-child td{border-bottom:0}
-.tbl tbody tr{transition:background .12s ease;cursor:pointer}
-.tbl tbody tr:hover{background:var(--surface-2)}
-.tbl tbody tr:active{background:var(--accent-soft)}
 
-.rail{border-left:3px solid transparent;padding-left:11px}
-.rail--soon{border-left-color:var(--alert)}
-.rail--over{border-left-color:var(--danger)}
-
-.cell-created{font-family:var(--mono);font-size:14px;color:var(--muted);white-space:nowrap}
-.cell-name{
-  font-weight:550;color:var(--ink);display:block;text-align:left;
-  background:none;border:0;padding:0;font-family:inherit;font-size:16px;cursor:pointer;
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow);padding:16px;cursor:pointer;
+  display:flex;flex-direction:column;gap:10px;
+  transition:border-color .14s ease,box-shadow .14s ease,transform .08s ease;
 }
-.cell-name:hover{color:var(--accent);text-decoration:underline}
-.cell-contact{font-size:14px;color:var(--muted);display:block;margin-top:1px}
-.cell-link{
+.card:hover{border-color:var(--line-2);box-shadow:0 2px 6px rgba(90,64,38,.09)}
+.card:active{transform:translateY(1px)}
+.card--soon{border-left:3px solid var(--alert)}
+.card--over{border-left:3px solid var(--danger)}
+
+.card__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card__name{
+  font-weight:600;color:var(--ink);display:block;text-align:left;
+  background:none;border:0;padding:0;font-family:inherit;font-size:17px;cursor:pointer;
+}
+.card__name:hover{color:var(--accent);text-decoration:underline}
+.card__created{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap;flex:none;padding-top:2px}
+.card__link{
   display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--accent);
   text-decoration:none;font-family:var(--mono);margin-top:2px;
 }
-.cell-link:hover{text-decoration:underline}
-.cell-sub{font-size:15px;color:var(--ink-2)}
-.cell-date{font-family:var(--mono);font-size:15px;color:var(--ink-2)}
-.cell-date--soon{color:var(--alert);font-weight:550}
-.cell-date--over{color:var(--danger);font-weight:550}
+.card__link:hover{text-decoration:underline}
+
+.card__sub-row{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.card__sub{font-size:15px;color:var(--ink-2)}
+.card__contact{font-size:14px;color:var(--muted)}
+
+.card__foot{
+  display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;
+  border-top:1px solid var(--line);padding-top:10px;margin-top:2px;
+}
+.card__expiry{font-family:var(--mono);font-size:14px;color:var(--ink-2)}
+.card__expiry--soon{color:var(--alert);font-weight:550}
+.card__expiry--over{color:var(--danger);font-weight:550}
+.card__reqs{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-2)}
 
 .badge{
   display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;
@@ -135,10 +140,23 @@ button,input,select,textarea{font:inherit; color:inherit}
 .badge--maint{background:var(--warn-soft);color:var(--warn)}
 .badge--off{background:var(--off-soft);color:var(--off)}
 
+.status-select{
+  appearance:none;-webkit-appearance:none;
+  padding:4px 26px 4px 12px;border-radius:999px;border:1px solid transparent;
+  font-size:14px;font-weight:500;cursor:pointer;
+  background-repeat:no-repeat;background-position:right 10px center;background-size:9px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235C5148' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.status-select:hover{border-color:var(--line-2)}
+.status-select.badge--doing{background-color:var(--ok-soft);color:var(--ok)}
+.status-select.badge--live{background-color:var(--live-soft);color:var(--live)}
+.status-select.badge--maint{background-color:var(--warn-soft);color:var(--warn)}
+.status-select.badge--off{background-color:var(--off-soft);color:var(--off)}
+
 .pill-count{
   display:inline-flex;align-items:center;justify-content:center;
-  min-width:28px;height:28px;padding:0 8px;border-radius:999px;
-  font-family:var(--mono);font-size:14px;font-weight:600;
+  min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  font-family:var(--mono);font-size:13px;font-weight:600;
 }
 .pill-count--zero{background:var(--off-soft);color:var(--muted);font-weight:400}
 .pill-count--some{background:var(--danger-soft);color:var(--danger)}
@@ -147,19 +165,8 @@ button,input,select,textarea{font:inherit; color:inherit}
 .empty__title{font-size:19px;font-weight:600;margin:0 0 6px}
 .empty__body{color:var(--muted);font-size:16px;margin:0 0 18px}
 
-/* ---------- 手機：表格轉卡片 ---------- */
-@media (max-width:960px){
-  .tbl thead{display:none}
-  .tbl,.tbl tbody,.tbl td{display:block;width:100%}
-  .tbl tr{display:flex;flex-direction:column;border-bottom:1px solid var(--line);padding:14px}
-  .tbl tbody tr:last-child{border-bottom:0}
-  .tbl td{border:0;padding:3px 0;display:flex;justify-content:space-between;gap:14px;align-items:center}
-  .tbl td::before{content:attr(data-label);font-size:13.5px;color:var(--muted);flex:none}
-  .tbl td.td-name{display:block;order:-1;padding-bottom:8px}
-  .tbl td.td-name::before{display:none}
-  .rail{border-left:0;padding-left:0}
-  .tbl tbody tr.row--soon{border-left:3px solid var(--alert)}
-  .tbl tbody tr.row--over{border-left:3px solid var(--danger)}
+@media (max-width:480px){
+  .cards{grid-template-columns:1fr}
 }
 
 /* ---------- 詳細頁 ---------- */
@@ -380,7 +387,7 @@ dialog::backdrop{background:rgba(16,20,26,.5)}
         <p class="resultbar" id="resultbar" role="status" aria-live="polite"></p>
       </div>
 
-      <div class="sheet" id="list-sheet"></div>
+      <div id="list-sheet"></div>
     </section>
 
     <!-- ============ 詳細頁 ============ -->
@@ -897,7 +904,7 @@ function renderList(){
 
   if(!state.projects.length){
     $("#list-sheet").innerHTML = `
-      <div class="empty">
+      <div class="sheet empty">
         <p class="empty__title">建立你的第一個專案</p>
         <p class="empty__body">把手上的案子放進來，之後就能追蹤狀態、到期日和客戶的需求。</p>
         <button class="btn btn--primary" type="button" onclick="document.getElementById('btn-new').click()">新增專案</button>
@@ -906,7 +913,7 @@ function renderList(){
   }
   if(!rows.length){
     $("#list-sheet").innerHTML = `
-      <div class="empty">
+      <div class="sheet empty">
         <p class="empty__title">沒有符合的專案</p>
         <p class="empty__body">換個關鍵字，或把狀態篩選切回「全部」。</p>
       </div>`;
@@ -914,63 +921,72 @@ function renderList(){
   }
 
   $("#list-sheet").innerHTML = `
-    <table class="tbl">
-      <caption>專案列表，共 ${rows.length} 筆</caption>
-      <thead>
-        <tr>
-          <th scope="col">建立日期</th>
-          <th scope="col">專案名稱</th>
-          <th scope="col">業務</th>
-          <th scope="col">狀態</th>
-          <th scope="col">維護到期</th>
-          <th scope="col">待辦需求</th>
-        </tr>
-      </thead>
-      <tbody>${rows.map(rowHTML).join("")}</tbody>
-    </table>`;
+    <div class="cards" role="list" aria-label="專案列表，共 ${rows.length} 筆">
+      ${rows.map(cardHTML).join("")}
+    </div>`;
 
-  $$("#list-sheet tbody tr").forEach(tr => {
-    tr.addEventListener("click", e => {
-      if(e.target.closest("a")) return;
-      openDetail(tr.dataset.id);
+  $$("#list-sheet .card").forEach(card => {
+    card.addEventListener("click", e => {
+      if(e.target.closest("a, select")) return;
+      openDetail(card.dataset.id);
+    });
+  });
+  $$("#list-sheet .status-select").forEach(sel => {
+    sel.addEventListener("change", e => {
+      e.stopPropagation();
+      quickSetStatus(sel.dataset.id, sel.value);
     });
   });
 }
 
-function rowHTML(p){
+async function quickSetStatus(id, status){
+  const p = state.projects.find(x => x.id === id);
+  if(!p || p.status === status) return;
+  await dbPut("projects", { ...p, status, updatedAt: Date.now() });
+  await loadAll();
+  renderList();
+  toast("狀態已更新");
+}
+
+function cardHTML(p){
   const st = statusOf(p.status);
   const lv = expiryLevel(p.expiryDate, p.status);
   const n  = openReqCount(p.id);
   const d  = daysUntil(p.expiryDate);
-  let dateText = "—";
+  let dateText = "未設定到期日";
   if(p.expiryDate){
-    dateText = p.expiryDate;
+    dateText = "到期 " + p.expiryDate;
     if(lv === "over") dateText += `（逾期 ${Math.abs(d)} 天）`;
     else if(lv === "soon") dateText += `（剩 ${d} 天）`;
   }
   const link = p.domain
-    ? `<a class="cell-link" href="${esc(normUrl(p.domain))}" target="_blank" rel="noopener">${esc(p.domain)} ↗</a>`
+    ? `<a class="card__link" href="${esc(normUrl(p.domain))}" target="_blank" rel="noopener">${esc(p.domain)} ↗</a>`
     : "";
   const ct = contactOf(p);
   return `
-    <tr data-id="${p.id}" class="${lv ? "row--" + lv : ""}">
-      <td class="td-created" data-label="建立日期">
-        <span class="rail ${lv ? "rail--" + lv : ""}">
-          <span class="cell-created">${fmtDay(p.createdAt)}</span>
-        </span>
-      </td>
-      <td class="td-name" data-label="專案名稱">
-        <button class="cell-name" type="button">${esc(p.name)}</button>
-        ${link}
-      </td>
-      <td data-label="業務">
-        <span class="cell-sub">${esc(p.client) || "—"}</span>
-        ${ct && ct.name ? `<span class="cell-contact">窗口 ${esc(ct.name)}</span>` : ""}
-      </td>
-      <td data-label="狀態"><span class="badge ${st.cls}">${st.label}</span></td>
-      <td data-label="維護到期"><span class="cell-date ${lv ? "cell-date--" + lv : ""}">${esc(dateText)}</span></td>
-      <td data-label="待辦需求"><span class="pill-count ${n ? "pill-count--some" : "pill-count--zero"}">${n}</span></td>
-    </tr>`;
+    <article class="card ${lv ? "card--" + lv : ""}" data-id="${p.id}" role="listitem">
+      <div class="card__top">
+        <div>
+          <button class="card__name" type="button">${esc(p.name)}</button>
+          ${link}
+        </div>
+        <span class="card__created">${fmtDay(p.createdAt)}</span>
+      </div>
+      <div class="card__sub-row">
+        <span class="card__sub">${esc(p.client) || "—"}</span>
+        ${ct && ct.name ? `<span class="card__contact">窗口 ${esc(ct.name)}</span>` : ""}
+      </div>
+      <div class="card__foot">
+        <label>
+          <span class="sr-only">狀態</span>
+          <select class="status-select ${st.cls}" data-id="${p.id}">
+            ${STATUSES.map(s => `<option value="${s.key}" ${s.key === p.status ? "selected" : ""}>${esc(s.label)}</option>`).join("")}
+          </select>
+        </label>
+        <span class="card__expiry ${lv ? "card__expiry--" + lv : ""}">${esc(dateText)}</span>
+        <span class="card__reqs"><span class="pill-count ${n ? "pill-count--some" : "pill-count--zero"}">${n}</span>待辦需求</span>
+      </div>
+    </article>`;
 }
 
 $("#q").addEventListener("input", e => { state.filter.q = e.target.value; renderList(); });
@@ -1939,7 +1955,7 @@ $("#file-import").addEventListener("change", async e => {
 /* ═══════════ 啟動 ═══════════ */
 (async function init(){
   if(!FIREBASE_READY){
-    $("#list-sheet").innerHTML = `<div class="empty">
+    $("#list-sheet").innerHTML = `<div class="sheet empty">
       <p class="empty__title">尚未設定雲端資料庫</p>
       <p class="empty__body">請先建立 Firebase 專案，並把程式碼中的 FIREBASE_CONFIG 換成你專案的設定值，步驟見 README。</p></div>`;
     return;
@@ -1949,7 +1965,7 @@ $("#file-import").addEventListener("change", async e => {
     renderList();
     subscribeRealtime();
   } catch(err) {
-    $("#list-sheet").innerHTML = `<div class="empty">
+    $("#list-sheet").innerHTML = `<div class="sheet empty">
       <p class="empty__title">無法連線到雲端資料庫</p>
       <p class="empty__body">請確認網路連線，以及 Firebase 專案設定與 Firestore／Storage 權限規則是否正確。</p></div>`;
     console.error(err);
