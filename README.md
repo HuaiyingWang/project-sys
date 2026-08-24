@@ -1,6 +1,6 @@
 # Project Desk 接案專案管理
 
-單一 HTML 檔案的接案專案管理工具，無需建置流程。資料存在 Firebase（雲端資料庫），只要打開網址就能看到所有裝置同步的最新紀錄，其他人編輯時畫面也會即時更新。
+接案專案管理工具，`index.html` + `style.css` + `script.js` 三個純靜態檔案，無需建置流程。資料存在 Firebase（雲端資料庫），只要打開網址就能看到所有裝置同步的最新紀錄，其他人編輯時畫面也會即時更新。
 
 ## 雲端同步設定（第一次使用前必做）
 
@@ -10,7 +10,7 @@
 2. 左側選單 **Build → Firestore Database**，點「建立資料庫」，模式選哪個都可以（規則等一下會覆蓋），地區選離你近的（例如 asia-east1）。
 3. **Firestore Database → 規則**，貼上 [`firebase/firestore.rules`](firebase/firestore.rules) 整份內容取代預設值，然後發布。
 4. 左側選單 **專案總覽 → 齒輪 → 專案設定**，往下捲到「你的應用程式」，點 `</>`（網頁）圖示註冊一個新應用程式，會拿到一組設定值。
-5. 打開 `index.html`，找到 `FIREBASE_CONFIG`，把裡面的值換成你剛剛拿到的設定：
+5. 打開 `script.js`，找到 `FIREBASE_CONFIG`，把裡面的值換成你剛剛拿到的設定：
    ```js
    const FIREBASE_CONFIG = {
      apiKey: "...",
@@ -24,7 +24,7 @@
 
 ## 功能
 
-- **專案列表**：搜尋、依狀態篩選、多種排序方式（最近更新／建立日期／維護到期日／名稱／業務／待辦需求數）
+- **專案列表**：卡片式版面，搜尋、依狀態篩選、多種排序方式（最近更新／建立日期／維護到期日／名稱／業務／待辦需求數），卡片上可直接切換狀態
 - **專案基本資料**：狀態、業務、聯絡窗口、上線／到期日等
 - **技術資訊**：正式網域、測試站、後台網址、主機、FTP 資訊
 - **需求紀錄時間軸**：記錄每筆需求內容、來源窗口、完成狀態
@@ -37,11 +37,12 @@
 
 ## 技術棧
 
-- Vanilla JS（無框架）、單一 `index.html`
+- Vanilla JS（無框架）、`index.html` / `style.css` / `script.js` 三個靜態檔案
 - Firebase Firestore 儲存專案、需求、聯絡窗口；圖片與檔案轉成 base64 文字直接存進 Firestore 文件（不用 Firebase Storage，免信用卡），並用 Firestore 的即時監聽推送變更
 
 ## 近期更新
 
+- 專案列表改為卡片式版面（原本是表格），卡片上新增狀態下拉選單可直接切換，不用開編輯視窗；CSS／JS 拆成獨立的 `style.css`／`script.js`，`index.html` 只留結構
 - 資料層從瀏覽器本機 IndexedDB 改為雲端資料庫，打開網址即可看到跨裝置同步的最新紀錄，並支援即時更新
 - 雲端資料庫由 Supabase 改為 Firebase Firestore，避開 Supabase 免費方案「最多 2 個專案」的額度限制
 - 圖片／檔案改為直接以文字編碼存進 Firestore，不使用 Firebase Storage，避開「開通 Storage 需升級付費方案」的問題；代價是單一檔案大小上限 700KB
