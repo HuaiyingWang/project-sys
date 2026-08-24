@@ -98,7 +98,7 @@ button,input,select,textarea{font:inherit; color:inherit}
 .card--soon{border-left:3px solid var(--alert)}
 .card--over{border-left:3px solid var(--danger)}
 
-.card__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-height:74px}
 .card__name{
   font-weight:600;color:var(--ink);display:block;text-align:left;
   background:none;border:0;padding:0;font-family:inherit;font-size:17px;cursor:pointer;
@@ -106,7 +106,8 @@ button,input,select,textarea{font:inherit; color:inherit}
 .card__name:hover{color:var(--accent);text-decoration:underline}
 .card__created{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap;flex:none;padding-top:2px}
 .card__link{
-  display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--accent);
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+  font-size:14px;color:var(--accent);word-break:break-all;
   text-decoration:none;font-family:var(--mono);margin-top:2px;
 }
 .card__link:hover{text-decoration:underline}
